@@ -10,10 +10,10 @@ Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici
 
 | Integrante | Usuario de GitHub | Rol | Responsabilidades principales |
 |---|---|---|---|
-| CH1 | `@usuario` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración final y reporte |
-| LH3 | `@usuario` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
-| HH2 | `@usuario` | Exploración y features | Notebook de exploración y `mibici/features.py` para P1, P2 y P3 |
-| DH4 | `@usuario` | Modelado y experimentación | `mibici/modeling/`, gráficas y experimento en MLflow |
+| Cristhian Hernandez CH1| `@CristhianHernandez` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración final y reporte |
+| Luis Hernandez LH3| `@Luispiriu` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
+| Horacio Hernandez HH2| `@usuario` | Exploración y features | Notebook de exploración y `mibici/features.py` para P1, P2 y P3 |
+| Derick Hernandez DH4| `@zohet` | Modelado y experimentación | `mibici/modeling/`, gráficas y experimento en MLflow |
 
 Trabajamos en cadena: cada integrante revisa el PR anterior y construye su parte encima
 (CH1 → LH3 → HH2 → DH4 → cierre de CH1). Las tareas de cada uno y los contratos entre módulos están en
