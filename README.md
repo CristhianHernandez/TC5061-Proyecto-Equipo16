@@ -10,10 +10,13 @@ Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici
 
 | Integrante | Usuario de GitHub | Rol | Responsabilidades principales |
 |---|---|---|---|
-| CH1 | `@usuario` | Líder técnico / MLOps | Repositorio, flujo Git, seguimiento en MLflow, integración final y reporte |
-| HH2 | `@usuario` | Configuración y entorno | `mibici/config.py`, dependencias fijas, reproducibilidad y pruebas |
+| CH1 | `@usuario` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración y reporte |
+| HH2 | `@usuario` | Modelado y reproducibilidad | `mibici/modeling/`, experimento en MLflow y verificación desde un clon limpio |
 | LH3 | `@usuario` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
-| DH4 | `@usuario` | Ciencia de datos | Exploración, `mibici/features.py`, modelos base de P1/P2/P3 y métricas |
+| DH4 | `@usuario` | Ciencia de datos | Exploración y `mibici/features.py` para P1, P2 y P3 |
+
+El orden de trabajo y los contratos entre módulos están en
+[`references/plan-de-implementacion.md`](references/plan-de-implementacion.md).
 
 ## Flujo de trabajo en Git
 
