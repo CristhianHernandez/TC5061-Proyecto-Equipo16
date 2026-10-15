@@ -85,10 +85,11 @@ URLS_VIAJES = {
 ALFA_RIESGO = 0.5
 HORAS_FRANJA = 3
 
-# MLflow. El URI se puede sobrescribir en .env; se evita el puerto 5000 (AirPlay en macOS)
+# MLflow: los runs se envían al servidor que levanta `make mlflow` (ver README).
+# En macOS el puerto 5000 lo ocupa AirPlay Receiver; en ese caso se cambia el URI en .env
 EQUIPO = "16"
 EXPERIMENTO_MLFLOW = "mibici-equipo16"
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{PROJ_ROOT / 'mlflow.db'}")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
