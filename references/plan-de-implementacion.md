@@ -1,20 +1,23 @@
 # Plan de implementación — Equipo 16
 
-Cuatro Pull Requests, uno por integrante, integrados en orden. Cada PR deja `main` funcionando
-(`make lint` y `make test` pasan) y respeta los contratos de abajo para que los siguientes puedan
-avanzar en paralelo.
+Cuatro Pull Requests, uno por integrante, en una **cadena lineal**: cada integrante revisa y aprueba
+el PR anterior, descarga `main` ya integrado y construye su parte encima. Cada PR deja `main`
+funcionando (`make lint` y `make test` pasan) y respeta los contratos de abajo.
 
-| Orden | Rama | Abre | Revisa | Resultado |
+| Paso | Rama | Abre | Revisa | Resultado |
 |---|---|---|---|---|
 | 1 | `feat/base-del-proyecto` | CH1 | HH2 | Flujo Git, propuesta, ML Canvas, arquitectura, `config.py`, `tracking.py`, dependencias fijas |
-| 2 | `feat/ingesta-datos` | LH3 | DH4 | `make data` descarga, normaliza y versiona los 24 meses en Parquet |
-| 3 | `feat/features` | DH4 | CH1 | Notebook de exploración y `features.py` para P1, P2 y P3 |
-| 4 | `feat/modelos-mlflow` | HH2 | LH3 | `make train` entrena baselines y candidatos y registra los runs en MLflow |
+| 2 | `feat/ingesta-datos` | HH2 | LH3 | `make data` descarga, normaliza y versiona los 24 meses en Parquet |
+| 3 | `feat/features` | LH3 | DH4 | Notebook de exploración y `features.py` para P1, P2 y P3 |
+| 4 | `feat/modelos-mlflow` | DH4 | CH1 | `make train` entrena baselines y candidatos y registra los runs en MLflow |
 
-**Cómo trabajar antes de que se integre el PR anterior:** crear la rama desde `main` en cuanto el
-PR previo esté integrado. Mientras tanto se puede programar contra los contratos con datos
-sintéticos (DH4 y HH2) o probar con la rama del compañero (`git fetch` + `git switch <rama>`),
-sin hacer merge de ella.
+```
+CH1 abre PR 1 → HH2 aprueba → HH2 abre PR 2 → LH3 aprueba → LH3 abre PR 3 → DH4 aprueba → DH4 abre PR 4 → CH1 aprueba y cierra
+```
+
+El orden sigue las dependencias del código: base → datos → features → modelos. Quien revisa un PR
+es quien construye sobre él, así que la revisión también le sirve para preparar su paso. Para que
+la cadena sea rápida, **cada revisión se hace en cuanto se recibe el aviso**.
 
 ## Reglas comunes
 
@@ -39,7 +42,7 @@ sin hacer merge de ella.
 | `ALFA_RIESGO`, `HORAS_FRANJA` | `0.5`, `3` |
 | `EXPERIMENTO_MLFLOW`, `EQUIPO`, `MLFLOW_TRACKING_URI` | `mibici-equipo16`, `16`, `http://127.0.0.1:5000` (sobrescribible en `.env`) |
 
-### Datos procesados (PR 2)
+### Datos procesados (PR 2, HH2)
 
 `data/processed/viajes/viajes_AAAA_MM.parquet`, un archivo por mes:
 
@@ -103,47 +106,114 @@ Todo run se abre con `mibici.tracking.iniciar_run(pregunta, nombre, params)` y s
 registran con `registrar_metricas()`, que exige los prefijos `train_`, `val_` o `test_`.
 Nombres de run: `p<n>-<modelo>`, por ejemplo `p1-naive-estacional` o `p2-hgb-balanceado`.
 
-## Detalle por PR
+## Qué hace cada integrante
 
-### PR 1 · Base del proyecto (CH1, revisa HH2)
+### Preparación (todos, una sola vez)
+
+1. Aceptar la invitación de colaborador en GitHub.
+2. Clonar y preparar el entorno con Python 3.13:
+
+   ```bash
+   git clone <url del repositorio>
+   cd TC5061-Proyecto-Equipo16
+   python3.13 -m venv .venv          # Windows: py -3.13 -m venv .venv
+   source .venv/bin/activate         # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   cp .env.example .env              # Windows: copy .env.example .env
+   make test
+   ```
+
+3. Leer este plan y `references/propuesta-parte-a.md`.
+
+### Cómo revisar un PR (HH2, LH3, DH4 y CH1)
+
+1. Traer la rama del PR y probarla:
+
+   ```bash
+   git fetch origin
+   git switch <rama-del-pr>
+   make lint && make test
+   ```
+
+2. Revisar en GitHub (pestaña *Files changed*) que se cumpla la lista de la plantilla de PR y las
+   tareas de ese paso en este plan. Comentar en las líneas concretas lo que haya que corregir.
+3. Aprobar (*Review changes* → *Approve*) cuando todo esté resuelto.
+4. Quien abrió el PR hace **Squash and merge** y avisa al siguiente de la cadena.
+
+### Cómo hacer tu PR (HH2, LH3 y DH4)
+
+```bash
+git switch main && git pull            # trae el PR anterior ya integrado
+git switch -c <tu-rama>                # nombre exacto de la tabla de arriba
+# implementar las tareas de tu paso; commits pequeños con Conventional Commits:
+git add <archivos> && git commit -m "feat(dataset): leer CSV en latin-1"
+make lint && make test                 # deben pasar antes de subir
+git push -u origin <tu-rama>
+```
+
+En GitHub: abrir el PR hacia `main`, título con Conventional Commits, llenar la plantilla y asignar
+al revisor de la tabla.
+
+### Paso 1 · CH1 — Base del proyecto (revisa HH2)
 
 - [x] README con integrantes, roles y flujo Git; plantilla de PR; `.gitignore` ampliado.
 - [x] `references/propuesta-parte-a.md`, `references/ml-canvas.md`, `references/arquitectura.md` y este plan.
 - [x] `config.py` con los contratos; `tracking.py`; pruebas `test_config.py` y `test_tracking.py`.
-- [x] `requirements.txt` con versiones fijas; `.env.example`.
+- [x] `requirements.txt` con versiones fijas; `.env.example`; regla `make mlflow`.
+- [ ] Usuarios de GitHub en la tabla de integrantes del README.
+- [ ] Push, abrir el PR y avisar a HH2.
 
-### PR 2 · Ingesta de datos (LH3, revisa DH4)
+### Paso 2 · HH2 — Ingesta de datos (revisa LH3)
 
-- `dataset.py` con `typer`: `python -m mibici.dataset` (y `make data`) descarga los meses de
-  `URLS_VIAJES` y la nomenclatura a `data/raw/`, sin volver a descargar lo que ya existe.
-- Lectura con UTF-8 y caída a latin-1 por archivo; ambos formatos de fecha (octubre 2024 usa `DD/MM/AAAA H:MM`).
-- Elimina `Usuario_Id`, `Genero` y `Año_de_nacimiento` antes de escribir Parquet.
-- Escribe los Parquet y el manifiesto con el formato acordado; `cargar_viajes()` y `cargar_estaciones()`.
-- Pruebas con CSV sintéticos: uno UTF-8, uno latin-1 y uno con el formato de octubre de 2024;
-  el manifiesto es idéntico si se ejecuta dos veces.
-- Actualizar en el Makefile la regla `data` y documentar el comando en el README.
-- Reportar en el PR las cifras reales: viajes por mes, total y estaciones con viajes.
+**Antes:** revisar y aprobar el PR 1 de CH1.
 
-### PR 3 · Exploración y features (DH4, revisa CH1)
+- [ ] `mibici/dataset.py` con `typer`: `python -m mibici.dataset` descarga los meses de `URLS_VIAJES`
+      y la nomenclatura a `data/raw/`, sin volver a descargar lo que ya existe.
+- [ ] Lectura con UTF-8 y caída a latin-1 por archivo; ambos formatos de fecha
+      (octubre de 2024 usa `DD/MM/AAAA H:MM`).
+- [ ] Eliminar `Usuario_Id`, `Genero` y `Año_de_nacimiento` antes de escribir Parquet.
+- [ ] Escribir los Parquet con el esquema acordado y `references/manifiesto_datos.json`.
+- [ ] `cargar_viajes()` y `cargar_estaciones()` para que los demás lean los datos.
+- [ ] Pruebas con CSV sintéticos: uno UTF-8, uno latin-1 y uno con el formato de octubre de 2024;
+      el manifiesto sale idéntico si se ejecuta dos veces.
+- [ ] Regla `make data` en el Makefile (hoy llama a `mibici/dataset.py` como script) y comando en el README.
+- [ ] Hacer commit del `manifiesto_datos.json` generado con los datos reales.
+- [ ] En la descripción del PR: viajes por mes, total y estaciones con viajes (cifras para el PDF).
 
-- `notebooks/1.0-dh4-exploracion-viajes.ipynb`: tamaño real, estaciones sin viajes o fuera del
-  catálogo, duraciones atípicas, distribución del flujo neto por franja (para confirmar `ALFA_RIESGO`
-  y `HORAS_FRANJA`). Figuras en `reports/figures/`.
-- `features.py` con las funciones del contrato.
-- Pruebas de no fuga: un cambio en datos posteriores a una fecha no cambia las variables de esa fecha.
-- Si la exploración cambia α, la franja o la limpieza, actualizar `config.py` y `propuesta-parte-a.md`.
+### Paso 3 · LH3 — Exploración y features (revisa DH4)
 
-### PR 4 · Modelos y experimento (HH2, revisa LH3)
+**Antes:** revisar y aprobar el PR 2 de HH2; correr `make data` en su máquina.
 
-- `modeling/p1_demanda.py`: naive estacional, promedio por estación × día de la semana y
-  `HistGradientBoostingRegressor(loss="poisson")`; MAE, RMSE y desviación Poisson en validación y prueba.
-- `modeling/p2_riesgo.py`: `DummyClassifier`, persistencia, `LogisticRegression(class_weight="balanced")`
-  y `HistGradientBoostingClassifier`; F1 macro, recall por clase, average precision y balanced accuracy.
-- `modeling/p3_clusters.py`: agrupación por municipio, `KMeans` y `AgglomerativeClustering(linkage="ward")`;
-  silueta, Davies-Bouldin, Calinski-Harabasz y ARI entre semillas.
-- `plots.py`: real contra predicho (P1), matriz de confusión (P2), mapa de clusters (P3), registrados como artefactos.
-- `modeling/train.py` con `typer`: `python -m mibici.modeling.train --pregunta P1|P2|P3|todas` y regla `make train`.
-- README completo: comandos de ingesta y experimento; el servidor de MLflow se levanta con `make mlflow`
-  (`mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port 5000`).
-- Verificar desde un clon limpio: `make requirements`, `make data`, `make mlflow` (en otra terminal) y `make train`.
-- Capturas para el PDF: lista de runs, detalle de un run, un artefacto y comparación de dos runs.
+- [ ] `notebooks/1.0-lh3-exploracion-viajes.ipynb`: tamaño real, estaciones sin viajes o fuera del
+      catálogo, duraciones atípicas, distribución del flujo neto por franja para confirmar
+      `ALFA_RIESGO` y `HORAS_FRANJA`. Figuras en `reports/figures/`.
+- [ ] `mibici/features.py` con las funciones del contrato, cada una con docstring.
+- [ ] Pruebas de no fuga: cambiar datos posteriores a una fecha no cambia las variables de esa fecha.
+- [ ] Si la exploración cambia α, la franja o la limpieza: actualizar `config.py`,
+      `references/propuesta-parte-a.md` y avisar a DH4.
+
+### Paso 4 · DH4 — Modelos y experimento (revisa CH1)
+
+**Antes:** revisar y aprobar el PR 3 de LH3; correr `make data` y levantar `make mlflow`.
+
+- [ ] `modeling/p1_demanda.py`: naive estacional, promedio por estación × día de la semana y
+      `HistGradientBoostingRegressor(loss="poisson")`; MAE, RMSE y desviación Poisson en validación y prueba.
+- [ ] `modeling/p2_riesgo.py`: `DummyClassifier`, persistencia, `LogisticRegression(class_weight="balanced")`
+      y `HistGradientBoostingClassifier`; F1 macro, recall por clase, average precision y balanced accuracy.
+- [ ] `modeling/p3_clusters.py`: agrupación por municipio, `KMeans` y `AgglomerativeClustering(linkage="ward")`;
+      silueta, Davies-Bouldin, Calinski-Harabasz y ARI entre semillas.
+- [ ] `plots.py`: real contra predicho (P1), matriz de confusión (P2) y mapa de clusters (P3), registrados
+      como artefactos.
+- [ ] `modeling/train.py` con `typer`: `python -m mibici.modeling.train --pregunta P1|P2|P3|todas`
+      y regla `make train`.
+- [ ] Todos los runs con `tracking.iniciar_run()`; nombres `p<n>-<modelo>`.
+- [ ] README: comandos de ingesta y experimento, y cómo abrir MLflow (`make mlflow`).
+- [ ] Capturas de MLflow para el PDF: lista de runs, detalle de un run, un artefacto y comparación de dos runs.
+
+### Cierre · CH1
+
+- [ ] Revisar y aprobar el PR 4 de DH4.
+- [ ] Verificar desde un clon limpio: `pip install -r requirements.txt`, `make data`, `make mlflow`
+      (en otra terminal) y `make train`.
+- [ ] Confirmar en GitHub que cada integrante abrió un PR y revisó uno de otro.
+- [ ] Completar el PDF con las cifras reales, las capturas y las referencias verificadas.
