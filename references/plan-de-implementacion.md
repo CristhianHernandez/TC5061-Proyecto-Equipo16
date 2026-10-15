@@ -6,13 +6,13 @@ funcionando (`make lint` y `make test` pasan) y respeta los contratos de abajo.
 
 | Paso | Rama | Abre | Revisa | Resultado |
 |---|---|---|---|---|
-| 1 | `feat/base-del-proyecto` | CH1 | HH2 | Flujo Git, propuesta, ML Canvas, arquitectura, `config.py`, `tracking.py`, dependencias fijas |
-| 2 | `feat/ingesta-datos` | HH2 | LH3 | `make data` descarga, normaliza y versiona los 24 meses en Parquet |
-| 3 | `feat/features` | LH3 | DH4 | Notebook de exploración y `features.py` para P1, P2 y P3 |
+| 1 | `feat/base-del-proyecto` | CH1 | LH3 | Flujo Git, propuesta, ML Canvas, arquitectura, `config.py`, `tracking.py`, dependencias fijas |
+| 2 | `feat/ingesta-datos` | LH3 | HH2 | `make data` descarga, normaliza y versiona los 24 meses en Parquet |
+| 3 | `feat/features` | HH2 | DH4 | Notebook de exploración y `features.py` para P1, P2 y P3 |
 | 4 | `feat/modelos-mlflow` | DH4 | CH1 | `make train` entrena baselines y candidatos y registra los runs en MLflow |
 
 ```
-CH1 abre PR 1 → HH2 aprueba → HH2 abre PR 2 → LH3 aprueba → LH3 abre PR 3 → DH4 aprueba → DH4 abre PR 4 → CH1 aprueba y cierra
+CH1 abre PR 1 → LH3 aprueba → LH3 abre PR 2 → HH2 aprueba → HH2 abre PR 3 → DH4 aprueba → DH4 abre PR 4 → CH1 aprueba y cierra
 ```
 
 El orden sigue las dependencias del código: base → datos → features → modelos. Quien revisa un PR
@@ -42,7 +42,7 @@ la cadena sea rápida, **cada revisión se hace en cuanto se recibe el aviso**.
 | `ALFA_RIESGO`, `HORAS_FRANJA` | `0.5`, `3` |
 | `EXPERIMENTO_MLFLOW`, `EQUIPO`, `MLFLOW_TRACKING_URI` | `mibici-equipo16`, `16`, `http://127.0.0.1:5000` (sobrescribible en `.env`) |
 
-### Datos procesados (PR 2, HH2)
+### Datos procesados (PR 2, LH3)
 
 `data/processed/viajes/viajes_AAAA_MM.parquet`, un archivo por mes:
 
@@ -125,7 +125,7 @@ Nombres de run: `p<n>-<modelo>`, por ejemplo `p1-naive-estacional` o `p2-hgb-bal
 
 3. Leer este plan y `references/propuesta-parte-a.md`.
 
-### Cómo revisar un PR (HH2, LH3, DH4 y CH1)
+### Cómo revisar un PR (LH3, HH2, DH4 y CH1)
 
 1. Traer la rama del PR y probarla:
 
@@ -140,7 +140,7 @@ Nombres de run: `p<n>-<modelo>`, por ejemplo `p1-naive-estacional` o `p2-hgb-bal
 3. Aprobar (*Review changes* → *Approve*) cuando todo esté resuelto.
 4. Quien abrió el PR hace **Squash and merge** y avisa al siguiente de la cadena.
 
-### Cómo hacer tu PR (HH2, LH3 y DH4)
+### Cómo hacer tu PR (LH3, HH2 y DH4)
 
 ```bash
 git switch main && git pull            # trae el PR anterior ya integrado
@@ -154,16 +154,16 @@ git push -u origin <tu-rama>
 En GitHub: abrir el PR hacia `main`, título con Conventional Commits, llenar la plantilla y asignar
 al revisor de la tabla.
 
-### Paso 1 · CH1 — Base del proyecto (revisa HH2)
+### Paso 1 · CH1 — Base del proyecto (revisa LH3)
 
 - [x] README con integrantes, roles y flujo Git; plantilla de PR; `.gitignore` ampliado.
 - [x] `references/propuesta-parte-a.md`, `references/ml-canvas.md`, `references/arquitectura.md` y este plan.
 - [x] `config.py` con los contratos; `tracking.py`; pruebas `test_config.py` y `test_tracking.py`.
 - [x] `requirements.txt` con versiones fijas; `.env.example`; regla `make mlflow`.
 - [ ] Usuarios de GitHub en la tabla de integrantes del README.
-- [ ] Push, abrir el PR y avisar a HH2.
+- [ ] Push, abrir el PR y avisar a LH3.
 
-### Paso 2 · HH2 — Ingesta de datos (revisa LH3)
+### Paso 2 · LH3 — Ingesta de datos (revisa HH2)
 
 **Antes:** revisar y aprobar el PR 1 de CH1.
 
@@ -180,11 +180,11 @@ al revisor de la tabla.
 - [ ] Hacer commit del `manifiesto_datos.json` generado con los datos reales.
 - [ ] En la descripción del PR: viajes por mes, total y estaciones con viajes (cifras para el PDF).
 
-### Paso 3 · LH3 — Exploración y features (revisa DH4)
+### Paso 3 · HH2 — Exploración y features (revisa DH4)
 
-**Antes:** revisar y aprobar el PR 2 de HH2; correr `make data` en su máquina.
+**Antes:** revisar y aprobar el PR 2 de LH3; correr `make data` en su máquina.
 
-- [ ] `notebooks/1.0-lh3-exploracion-viajes.ipynb`: tamaño real, estaciones sin viajes o fuera del
+- [ ] `notebooks/1.0-hh2-exploracion-viajes.ipynb`: tamaño real, estaciones sin viajes o fuera del
       catálogo, duraciones atípicas, distribución del flujo neto por franja para confirmar
       `ALFA_RIESGO` y `HORAS_FRANJA`. Figuras en `reports/figures/`.
 - [ ] `mibici/features.py` con las funciones del contrato, cada una con docstring.
@@ -194,7 +194,7 @@ al revisor de la tabla.
 
 ### Paso 4 · DH4 — Modelos y experimento (revisa CH1)
 
-**Antes:** revisar y aprobar el PR 3 de LH3; correr `make data` y levantar `make mlflow`.
+**Antes:** revisar y aprobar el PR 3 de HH2; correr `make data` y levantar `make mlflow`.
 
 - [ ] `modeling/p1_demanda.py`: naive estacional, promedio por estación × día de la semana y
       `HistGradientBoostingRegressor(loss="poisson")`; MAE, RMSE y desviación Poisson en validación y prueba.
