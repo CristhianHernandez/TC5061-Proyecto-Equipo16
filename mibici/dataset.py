@@ -29,8 +29,20 @@ def descargar_archivo(url: str, ruta: Path):
     ruta.parent.mkdir(parents=True, exist_ok=True)
     temporal = ruta.with_name(ruta.name + ".part")
 
+    # Cabeceras para que el servidor de MiBici acepte la solicitud.
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "text/csv,text/plain,*/*",
+        "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
+    }
+
     try:
-        with requests.get(url, stream=True, timeout=(15, 120)) as respuesta:
+        with requests.get(
+            url,
+            headers=headers,
+            stream=True,
+            timeout=(15, 120),
+        ) as respuesta:
             respuesta.raise_for_status()
 
             with temporal.open("wb") as archivo:
@@ -99,7 +111,7 @@ def procesar_viajes(ruta_csv: Path, ruta_parquet: Path):
         }
     )
 
-    # Se excluyen los identificadores de usuario y datos demográficos.
+    # Solo se conservan las columnas necesarias para el proyecto.
     columnas = ["viaje_id", "inicio", "fin", "origen_id", "destino_id"]
     df = df[columnas].copy()
 
@@ -148,7 +160,7 @@ def procesar_estaciones(ruta_csv: Path):
 
     df["nombre"] = df["nombre"].str.replace(r"^ex-\s*", "", regex=True, case=False)
 
-    # Se obtiene el municipio a partir del nombre de la estación.
+    # Municipio identificado en el nombre de la estación.
     df["municipio"] = df["nombre"].str.extract(r"^(GDL|ZPN|TLQ)", expand=False)
 
     df["estacion_id"] = df["estacion_id"].astype("int32")
@@ -204,7 +216,7 @@ def calcular_sha256(ruta: Path):
 
     sha256 = hashlib.sha256()
 
-    # Se lee por bloques para no cargar todo el CSV en memoria.
+    # Lectura por bloques para evitar cargar el CSV completo en memoria.
     with ruta.open("rb") as archivo:
         for bloque in iter(lambda: archivo.read(1024 * 1024), b""):
             sha256.update(bloque)
@@ -222,7 +234,6 @@ def generar_manifiesto():
         ruta_csv = RAW_DATA_DIR / nombre_csv
         ruta_parquet = VIAJES_DIR / f"viajes_{mes}.parquet"
 
-        # El número de viajes se obtiene del Parquet procesado.
         filas = len(pd.read_parquet(ruta_parquet, columns=["viaje_id"]))
 
         archivos.append(
@@ -243,7 +254,7 @@ def generar_manifiesto():
 
     MANIFIESTO_DATOS.parent.mkdir(parents=True, exist_ok=True)
 
-    # No se incluye fecha de generación para mantener el mismo resultado.
+    # Se mantiene un orden fijo y no se agrega fecha de generación.
     temporal = MANIFIESTO_DATOS.with_suffix(".json.part")
 
     with temporal.open("w", encoding="utf-8") as archivo:
@@ -279,7 +290,7 @@ def ejecutar_ingesta():
 
         procesar_viajes(ruta_csv, ruta_parquet)
 
-    # El catálogo se descarga y procesa por separado.
+    # El catálogo de estaciones se procesa por separado.
     nombre = URL_NOMENCLATURA.split("/")[-1]
     ruta_estaciones = RAW_DATA_DIR / nombre
 
