@@ -31,7 +31,7 @@ def test_urls_cubren_exactamente_los_24_meses_del_rango():
 
 def test_urls_apuntan_al_archivo_de_su_mes():
     for mes, url in config.URLS_VIAJES.items():
-        assert url.startswith("https://mibici.net/")
+        assert url.startswith("https://www.mibici.net/")
         assert url.endswith(f"/datos_abiertos_{mes}.csv")
 
 

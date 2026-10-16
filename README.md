@@ -1,19 +1,20 @@
+
 # TC5061-Proyecto-Equipo16
 
 <a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici
+Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici.
 
 ## Integrantes y roles
 
 | Integrante | Usuario de GitHub | Rol | Responsabilidades principales |
 |---|---|---|---|
-| Cristhian Hernandez CH1| `@CristhianHernandez` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración final y reporte |
-| Luis Hernandez LH3| `@Luispiriu` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
-| Horacio Hernandez HH2| `@usuario` | Exploración y features | Notebook de exploración y `mibici/features.py` para P1, P2 y P3 |
-| Derick Hernandez DH4| `@zohet` | Modelado y experimentación | `mibici/modeling/`, gráficas y experimento en MLflow |
+| Cristhian Hernandez CH1 | `@CristhianHernandez` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración final y reporte |
+| Luis Hernandez LH3 | `@Luispiriu` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
+| Horacio Hernandez HH2 | `@usuario` | Exploración y features | Notebook de exploración y `mibici/features.py` para P1, P2 y P3 |
+| Derick Hernandez DH4 | `@zohet` | Modelado y experimentación | `mibici/modeling/`, gráficas y experimento en MLflow |
 
 Trabajamos en cadena: cada integrante revisa el PR anterior y construye su parte encima
 (CH1 → LH3 → HH2 → DH4 → cierre de CH1). Las tareas de cada uno y los contratos entre módulos están en
@@ -72,6 +73,52 @@ también debe seguir esta convención, porque se convierte en el commit final en
 - Nunca se suben datos, modelos serializados, carpetas de MLflow (`mlruns/`, `mlartifacts/`)
   ni credenciales (`.env`); el `.gitignore` los excluye.
 
+## Ingesta y procesamiento de datos
+
+La ingesta se realiza desde `mibici/dataset.py` y utiliza 24 meses de datos abiertos de MiBici, de octubre de 2024 a septiembre de 2026, además del catálogo de estaciones.
+
+### Ejecución
+
+Con Python 3.13 y las dependencias instaladas:
+
+```bash
+make requirements
+make data
+```
+
+La ingesta descarga los CSV faltantes, normaliza columnas y fechas, elimina los datos personales (`Usuario_Id`, `Genero` y `Año_de_nacimiento`) y genera:
+
+- 24 archivos Parquet de viajes en `data/processed/viajes/`.
+- Un archivo `data/processed/estaciones.parquet` con el catálogo de estaciones.
+- El manifiesto `references/manifiesto_datos.json` con los hashes SHA-256 y el número de viajes por mes.
+
+En la ejecución realizada se procesaron los 24 meses y se registraron 484 estaciones.
+
+### Lectura de datos
+
+Los archivos procesados se pueden consultar desde Python:
+
+```python
+from mibici.dataset import cargar_viajes, cargar_estaciones
+
+viajes = cargar_viajes(["2024_10", "2024_11"])
+estaciones = cargar_estaciones()
+```
+
+Si se ejecuta `cargar_viajes()` sin indicar meses, se cargan todos los disponibles.
+
+### Pruebas
+
+Las pruebas de ingesta se encuentran en `tests/test_dataset.py`. Utilizan datos sintéticos para comprobar la lectura de CSV, transformación de fechas, exclusión de datos personales, procesamiento de estaciones y generación del manifiesto.
+
+```bash
+python -m pytest tests/test_dataset.py -v
+```
+
+Las 7 pruebas de ingesta pasaron correctamente con Python 3.13.
+
+**Nota:** durante el desarrollo se encontraron respuestas HTTP 406 al descargar algunos archivos desde Docker. Los CSV pudieron descargarse mediante PowerShell y procesarse correctamente. Queda pendiente resolver la descarga automática desde un entorno limpio.
+
 ## Project Organization
 
 ```
@@ -81,7 +128,7 @@ también debe seguir esta convención, porque se convierte en el commit final en
 ├── data
 │   ├── external       <- Data from third party sources.
 │   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
+│   ├── processed      <- Parquet de viajes y estaciones para modelado.
 │   └── raw            <- The original, immutable data dump.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
@@ -92,10 +139,10 @@ también debe seguir esta convención, porque se convierte en el commit final en
 │                         the creator's initials, and a short `-` delimited description, e.g.
 │                         `1.0-jqp-initial-data-exploration`.
 │
-├── pyproject.toml     <- Project configuration file with package metadata for 
+├── pyproject.toml     <- Project configuration file with package metadata for
 │                         mibici and configuration for tools like black
 │
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+├── references         <- Documentación y manifiesto SHA-256 de los datos.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
@@ -105,23 +152,27 @@ también debe seguir esta convención, porque se convierte en el commit final en
 │
 ├── setup.cfg          <- Configuration file for flake8
 │
-└── mibici   <- Source code for use in this project.
+├── tests
+│   ├── test_config.py
+│   ├── test_dataset.py <- Pruebas de ingesta y versionado de datos
+│   └── test_tracking.py
+│
+└── mibici             <- Source code for use in this project.
     │
-    ├── __init__.py             <- Makes mibici a Python module
+    ├── __init__.py    <- Makes mibici a Python module
     │
-    ├── config.py               <- Store useful variables and configuration
+    ├── config.py      <- Store useful variables and configuration
     │
-    ├── dataset.py              <- Scripts to download or generate data
+    ├── dataset.py     <- Descarga, normalización y versionado de datos MiBici
     │
-    ├── features.py             <- Code to create features for modeling
+    ├── features.py    <- Code to create features for modeling
     │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
-    │   └── train.py            <- Code to train models
+    ├── modeling
+    │   ├── __init__.py
+    │   ├── predict.py <- Code to run model inference with trained models
+    │   └── train.py   <- Code to train models
     │
-    └── plots.py                <- Code to create visualizations
+    └── plots.py       <- Code to create visualizations
 ```
 
 --------
-
