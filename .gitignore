@@ -1,6 +1,28 @@
 # Data
 /data/
 
+# Datos de MiBici fuera de data/ (descargas manuales o pruebas)
+datos_abiertos_*.csv
+nomenclatura_*.csv
+*.parquet
+
+# MLflow (tracking local, artefactos y base de datos)
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Modelos serializados
+/models/*
+!/models/.gitkeep
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+
+# Variables de entorno y credenciales
+.env.*
+!.env.example
+
 # Mac OS-specific storage files
 .DS_Store
 

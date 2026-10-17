@@ -6,6 +6,72 @@
 
 Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici
 
+## Integrantes y roles
+
+| Integrante | Usuario de GitHub | Rol | Responsabilidades principales |
+|---|---|---|---|
+| Cristhian Hernandez CH1| `@CristhianHernandez` | Líder técnico / MLOps | Repositorio, flujo Git, `mibici/config.py`, `mibici/tracking.py`, integración final y reporte |
+| Luis Hernandez LH3| `@Luispiriu` | Ingeniería de datos | Ingesta (`mibici/dataset.py`), Parquet, versionado de datos y tratamiento de datos personales |
+| Horacio Hernandez HH2| `@usuario` | Exploración y features | Notebook de exploración y `mibici/features.py` para P1, P2 y P3 |
+| Derick Hernandez DH4| `@zohet` | Modelado y experimentación | `mibici/modeling/`, gráficas y experimento en MLflow |
+
+Trabajamos en cadena: cada integrante revisa el PR anterior y construye su parte encima
+(CH1 → LH3 → HH2 → DH4 → cierre de CH1). Las tareas de cada uno y los contratos entre módulos están en
+[`references/plan-de-implementacion.md`](references/plan-de-implementacion.md).
+
+## Flujo de trabajo en Git
+
+Seguimos [GitHub Flow](https://docs.github.com/es/get-started/using-github/github-flow):
+
+1. Actualizar `main` local: `git switch main && git pull`.
+2. Crear una rama desde `main` con la convención de nombres (ver abajo).
+3. Hacer commits pequeños con [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/).
+4. Subir la rama y abrir un Pull Request hacia `main` usando la plantilla del repositorio.
+5. Otro integrante revisa; se resuelven todos los comentarios antes de integrar.
+6. Se integra con **squash merge** y la rama se borra automáticamente.
+
+### Protección de `main`
+
+`main` está protegida con un ruleset (`proteger-main`), sin excepciones para nadie:
+
+- No se permite push directo: todo cambio entra por Pull Request.
+- Se requiere 1 aprobación; un push nuevo invalida aprobaciones previas.
+- Todas las conversaciones del PR deben estar resueltas.
+- No se permite borrar la rama ni hacer force push.
+
+### Convención de ramas
+
+Formato `tipo/descripcion-corta`, en minúsculas y con guiones:
+
+| Tipo | Uso | Ejemplo |
+|---|---|---|
+| `feat/` | Nueva funcionalidad | `feat/ingesta-datos` |
+| `fix/` | Corrección de errores | `fix/codificacion-latin1` |
+| `docs/` | Documentación | `docs/flujo-de-trabajo` |
+| `refactor/` | Reestructura sin cambiar comportamiento | `refactor/config-centralizado` |
+| `test/` | Pruebas | `test/ingesta` |
+| `chore/` | Mantenimiento (dependencias, configuración) | `chore/fijar-dependencias` |
+
+### Convención de commits
+
+Formato `tipo(alcance opcional): descripción en imperativo`, por ejemplo:
+
+```
+feat(dataset): descargar meses y guardar en Parquet
+fix(dataset): leer archivos con codificación latin-1
+docs: documentar flujo de trabajo en Git
+chore: fijar versiones en requirements.txt
+```
+
+Los tipos son los mismos que los de las ramas. Como se integra con squash merge, el **título del PR**
+también debe seguir esta convención, porque se convierte en el commit final en `main`.
+
+### Reglas del equipo
+
+- Cada integrante abre al menos un PR y revisa al menos un PR de otro integrante.
+- Nunca se suben datos, modelos serializados, carpetas de MLflow (`mlruns/`, `mlartifacts/`)
+  ni credenciales (`.env`); el `.gitignore` los excluye.
+
 ## Project Organization
 
 ```
