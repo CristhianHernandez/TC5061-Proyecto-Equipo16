@@ -10,14 +10,11 @@ PYTHON_INTERPRETER = python
 # COMMANDS                                                                      #
 #################################################################################
 
-
 ## Install Python dependencies
 .PHONY: requirements
 requirements:
 	$(PYTHON_INTERPRETER) -m pip install -U pip
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
-	
-
 
 
 ## Delete all compiled Python files
@@ -33,6 +30,7 @@ lint:
 	ruff format --check
 	ruff check
 
+
 ## Format source code with ruff
 .PHONY: format
 format:
@@ -40,11 +38,10 @@ format:
 	ruff format
 
 
-
 ## Run tests
 .PHONY: test
 test:
-	python -m pytest tests
+	$(PYTHON_INTERPRETER) -m pytest tests
 
 
 ## Set up Python interpreter environment
@@ -52,13 +49,17 @@ test:
 create_environment:
 	@bash -c "if [ ! -z `which virtualenvwrapper.sh` ]; then source `which virtualenvwrapper.sh`; mkvirtualenv $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); else mkvirtualenv.bat $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); fi"
 	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
-	
-
 
 
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################
+
+## Start the MLflow tracking server (sqlite backend, artifacts in ./mlruns)
+MLFLOW_PORT ?= 5000
+.PHONY: mlflow
+mlflow:
+	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
 
 
 ## Start the MLflow tracking server (sqlite backend, artifacts in ./mlruns)
@@ -70,8 +71,8 @@ mlflow:
 
 ## Make dataset
 .PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) mibici/dataset.py
+data:
+	$(PYTHON_INTERPRETER) -m mibici.dataset
 
 
 #################################################################################
