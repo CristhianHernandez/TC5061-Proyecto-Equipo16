@@ -32,7 +32,7 @@ El portal publica desde diciembre de 2014 hasta septiembre de 2026. Elegimos los
 | Concepto | Valor |
 |---|---|
 | Meses | 24 |
-| Viajes | ~10 millones (*estimado* por el rango de `Viaje_Id`: 35.8 M → 45.7 M) |
+| Viajes | 9,043,925 (cifra exacta del manifiesto generado por `make data`) |
 | Volumen en CSV | ~770 MB (27–43 MB por mes) |
 | Estaciones en la nomenclatura | 484 (14 marcadas como `ex-`, dadas de baja; 4 de ellas con capacidad 0) |
 | Anclajes totales | 8,171 (capacidad mediana 15, máxima 39) |
@@ -144,6 +144,6 @@ que la regla no considera la acumulación entre franjas.
 
 - [ ] Validar con el equipo granularidad y horizonte de P1 y P2.
 - [ ] Confirmar `α` y la definición de franjas de P2 tras la exploración.
-- [ ] Reemplazar cifras estimadas con las de la ingesta (viajes exactos, estaciones con viajes).
-- [ ] ML Canvas, pipeline por pregunta y diagrama de arquitectura.
+- [x] Reemplazar cifras estimadas con las de la ingesta: 9,043,925 viajes; 470 estaciones con viajes tras la limpieza.
+- [x] ML Canvas, pipeline por pregunta y diagrama de arquitectura.
 - [ ] Referencias en formato APA 7.
