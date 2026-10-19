@@ -81,6 +81,13 @@ URLS_VIAJES = {
     for mes, carpeta in _CARPETAS_VIAJES.items()
 }
 
+# El servidor de MiBici responde 406 a los User-Agent `python-requests/*` y `Mozilla/5.0`;
+# acepta uno descriptivo que identifica al proyecto (verificado el 2026-10-18)
+CABECERAS_DESCARGA = {
+    "User-Agent": "mibici-equipo16/0.1 (proyecto academico TC5061)",
+    "Accept": "text/csv,text/plain,*/*",
+}
+
 # P2: riesgo aproximado con flujo neto y capacidad (ver references/propuesta-parte-a.md)
 ALFA_RIESGO = 0.5
 HORAS_FRANJA = 3
