@@ -46,7 +46,7 @@ FECHA_FIN = "2026-09-30"
 SEMILLA = 16
 
 # Fuente: https://mibici.net/es/datos-abiertos/ (consultado el 2026-10-14)
-URL_BASE_MIBICI = "https://www.mibici.net/site/assets/files"
+URL_BASE_MIBICI = "https://mibici.net/site/assets/files"
 URL_NOMENCLATURA = f"{URL_BASE_MIBICI}/1118/nomenclatura_2026_09.csv"
 
 # El identificador de carpeta del portal cambia por mes, por eso se listan uno a uno

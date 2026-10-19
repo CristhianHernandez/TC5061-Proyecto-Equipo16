@@ -62,7 +62,14 @@ mlflow:
 	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
 
 
-## Download and process MiBici data
+## Start the MLflow tracking server (sqlite backend, artifacts in ./mlruns)
+MLFLOW_PORT ?= 5000
+.PHONY: mlflow
+mlflow:
+	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
+
+
+## Make dataset
 .PHONY: data
 data:
 	$(PYTHON_INTERPRETER) -m mibici.dataset
