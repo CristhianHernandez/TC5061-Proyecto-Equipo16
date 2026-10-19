@@ -11,6 +11,10 @@ mlruns/
 mlartifacts/
 mlflow.db
 
+# Figuras generadas por make train (se registran como artefactos en MLflow)
+/reports/figures/*
+!/reports/figures/.gitkeep
+
 # Modelos serializados
 /models/*
 !/models/.gitkeep

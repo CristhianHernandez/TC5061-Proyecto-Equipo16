@@ -8,6 +8,7 @@ import requests
 import typer
 
 from mibici.config import (
+    CABECERAS_DESCARGA,
     ESTACIONES_PARQUET,
     MANIFIESTO_DATOS,
     RAW_DATA_DIR,
@@ -29,17 +30,10 @@ def descargar_archivo(url: str, ruta: Path):
     ruta.parent.mkdir(parents=True, exist_ok=True)
     temporal = ruta.with_name(ruta.name + ".part")
 
-    # Cabeceras para que el servidor de MiBici acepte la solicitud.
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "text/csv,text/plain,*/*",
-        "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
-    }
-
     try:
         with requests.get(
             url,
-            headers=headers,
+            headers=CABECERAS_DESCARGA,
             stream=True,
             timeout=(15, 120),
         ) as respuesta:
@@ -160,8 +154,9 @@ def procesar_estaciones(ruta_csv: Path):
 
     df["nombre"] = df["nombre"].str.replace(r"^ex-\s*", "", regex=True, case=False)
 
-    # Municipio identificado en el nombre de la estación.
-    df["municipio"] = df["nombre"].str.extract(r"^(GDL|ZPN|TLQ)", expand=False)
+    # Municipio identificado en el prefijo del nombre; en la nomenclatura real viene entre
+    # paréntesis, por ejemplo "(GDL-001) C. Epigmenio Glez./ Av. 16 de Sept.".
+    df["municipio"] = df["nombre"].str.extract(r"^\(?(GDL|ZPN|TLQ)\b", expand=False)
 
     df["estacion_id"] = df["estacion_id"].astype("int32")
     df["capacidad"] = df["capacidad"].astype("int32")

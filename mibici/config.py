@@ -81,6 +81,13 @@ URLS_VIAJES = {
     for mes, carpeta in _CARPETAS_VIAJES.items()
 }
 
+# El servidor de MiBici responde 406 a los User-Agent `python-requests/*` y `Mozilla/5.0`;
+# acepta uno descriptivo que identifica al proyecto (verificado el 2026-10-18)
+CABECERAS_DESCARGA = {
+    "User-Agent": "mibici-equipo16/0.1 (proyecto academico TC5061)",
+    "Accept": "text/csv,text/plain,*/*",
+}
+
 # P2: riesgo aproximado con flujo neto y capacidad (ver references/propuesta-parte-a.md)
 ALFA_RIESGO = 0.5
 HORAS_FRANJA = 3
@@ -100,3 +107,13 @@ try:
     logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 except ModuleNotFoundError:
     pass
+
+# DH4: rejillas pequeñas y protocolo reproducible de entrenamiento.
+REJILLA_P1 = {"learning_rate": [0.05, 0.1], "max_leaf_nodes": [31, 63]}
+REJILLA_LOGISTICA = {"C": [0.1, 1.0]}
+REJILLA_P2 = {"class_weight": [None, "balanced"], "learning_rate": [0.1]}
+ITERACIONES_HGB = 300
+RANGO_K_P3 = tuple(range(2, 9))
+N_SEMILLAS_P3 = 3
+CLASES_RIESGO = ("normal", "sin_anclajes", "sin_bicicletas")
+MINIMO_POISSON = 1e-6

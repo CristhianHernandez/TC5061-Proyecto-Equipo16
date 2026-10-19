@@ -62,11 +62,15 @@ mlflow:
 	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
 
 
-## Start the MLflow tracking server (sqlite backend, artifacts in ./mlruns)
-MLFLOW_PORT ?= 5000
-.PHONY: mlflow
-mlflow:
-	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
+PREGUNTA ?= todas
+ifeq ($(origin MLFLOW_PORT),command line)
+train: export MLFLOW_TRACKING_URI = http://127.0.0.1:$(MLFLOW_PORT)
+endif
+
+## Entrenar modelos y registrar experimentos DH4
+.PHONY: train
+train:
+	$(PYTHON_INTERPRETER) -m mibici.modeling.train --pregunta $(PREGUNTA)
 
 
 ## Make dataset

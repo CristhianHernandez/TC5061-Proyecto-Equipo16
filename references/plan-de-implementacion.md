@@ -196,19 +196,29 @@ al revisor de la tabla.
 
 **Antes:** revisar y aprobar el PR 3 de HH2; correr `make data` y levantar `make mlflow`.
 
-- [ ] `modeling/p1_demanda.py`: naive estacional, promedio por estación × día de la semana y
+- [x] `modeling/p1_demanda.py`: naive estacional, promedio por estación × día de la semana y
       `HistGradientBoostingRegressor(loss="poisson")`; MAE, RMSE y desviación Poisson en validación y prueba.
-- [ ] `modeling/p2_riesgo.py`: `DummyClassifier`, persistencia, `LogisticRegression(class_weight="balanced")`
+- [x] `modeling/p2_riesgo.py`: `DummyClassifier`, persistencia, `LogisticRegression(class_weight="balanced")`
       y `HistGradientBoostingClassifier`; F1 macro, recall por clase, average precision y balanced accuracy.
-- [ ] `modeling/p3_clusters.py`: agrupación por municipio, `KMeans` y `AgglomerativeClustering(linkage="ward")`;
+- [x] `modeling/p3_clusters.py`: agrupación por municipio, `KMeans` y `AgglomerativeClustering(linkage="ward")`;
       silueta, Davies-Bouldin, Calinski-Harabasz y ARI entre semillas.
-- [ ] `plots.py`: real contra predicho (P1), matriz de confusión (P2) y mapa de clusters (P3), registrados
+- [x] `plots.py`: real contra predicho (P1), matriz de confusión (P2) y mapa de clusters (P3), registrados
       como artefactos.
-- [ ] `modeling/train.py` con `typer`: `python -m mibici.modeling.train --pregunta P1|P2|P3|todas`
+- [x] `modeling/train.py` con `typer`: `python -m mibici.modeling.train --pregunta P1|P2|P3|todas`
       y regla `make train`.
-- [ ] Todos los runs con `tracking.iniciar_run()`; nombres `p<n>-<modelo>`.
-- [ ] README: comandos de ingesta y experimento, y cómo abrir MLflow (`make mlflow`).
-- [ ] Capturas de MLflow para el PDF: lista de runs, detalle de un run, un artefacto y comparación de dos runs.
+- [x] Todos los runs con `tracking.iniciar_run()`; nombres `p<n>-<modelo>`.
+- [x] README: comandos de ingesta y experimento, y cómo abrir MLflow (`make mlflow`).
+- [x] Capturas de MLflow para el PDF: lista de runs, detalle de un run, un artefacto y comparación de dos runs.
+
+Cambios de contrato acordados en el PR 4 (compatibles con lo anterior):
+
+- `config.CABECERAS_DESCARGA`: el portal responde 406 al User-Agent de `requests`; `dataset.py` usa estas cabeceras.
+- `flujo_por_franja(viajes, horas_franja=HORAS_FRANJA)` y `etiquetar_riesgo`/`preparar_datos_p2` con `alpha=ALFA_RIESGO`
+  por defecto, para que la franja y α vivan solo en `config.py`.
+- `perfiles_estacion(viajes, desde=FECHA_INICIO, hasta=INICIO_VALIDACION)`: el periodo es parametrizable para medir la
+  estabilidad de P3 en validación y prueba; por defecto se mantiene el periodo de entrenamiento.
+- Nombres reales de columnas que usan los modelos: `demanda` (P1) y `fecha_franja` (P2), en lugar de `viajes` y
+  `franja_inicio` de la tabla de contratos.
 
 ### Cierre · CH1
 

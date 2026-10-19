@@ -78,11 +78,11 @@ def test_procesar_estaciones(tmp_path, monkeypatch):
     ruta_parquet = tmp_path / "estaciones.parquet"
 
     datos = pd.DataFrame({
-        "id": [1, 2],
-        "name": ["GDL Centro", "ex-ZPN Norte"],
-        "latitude": [20.67, 20.70],
-        "longitude": [-103.35, -103.40],
-        "dpcapacity": [20, 15],
+        "id": [1, 2, 3],
+        "name": ["GDL Centro", "ex-ZPN Norte", "(TLQ-003) C. Independencia / C. Juárez"],
+        "latitude": [20.67, 20.70, 20.64],
+        "longitude": [-103.35, -103.40, -103.31],
+        "dpcapacity": [20, 15, 12],
     })
 
     datos.to_csv(ruta_csv, index=False)
@@ -91,14 +91,16 @@ def test_procesar_estaciones(tmp_path, monkeypatch):
     filas = dataset.procesar_estaciones(ruta_csv)
     resultado = pd.read_parquet(ruta_parquet)
 
-    assert filas == 2
+    assert filas == 3
     assert list(resultado.columns) == [
         "estacion_id", "nombre", "municipio",
         "latitud", "longitud", "capacidad", "activa"
     ]
-    assert resultado["municipio"].tolist() == ["GDL", "ZPN"]
-    assert resultado["activa"].tolist() == [True, False]
-    assert resultado["nombre"].tolist() == ["GDL Centro", "ZPN Norte"]
+    assert resultado["municipio"].tolist() == ["GDL", "ZPN", "TLQ"]
+    assert resultado["activa"].tolist() == [True, False, True]
+    assert resultado["nombre"].tolist() == [
+        "GDL Centro", "ZPN Norte", "(TLQ-003) C. Independencia / C. Juárez"
+    ]
 
 
 def test_calcular_sha256(tmp_path):
