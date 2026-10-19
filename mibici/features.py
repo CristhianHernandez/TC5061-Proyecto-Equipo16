@@ -4,7 +4,13 @@ from loguru import logger
 import pandas as pd
 import typer
 
-from mibici.config import PROCESSED_DATA_DIR
+from mibici.config import (
+    ALFA_RIESGO,
+    FECHA_INICIO,
+    HORAS_FRANJA,
+    INICIO_VALIDACION,
+    PROCESSED_DATA_DIR,
+)
 
 app = typer.Typer()
 
@@ -383,10 +389,10 @@ def preparar_datos_p1(
     return datos
 
 
-def flujo_por_franja(viajes: pd.DataFrame) -> pd.DataFrame:
+def flujo_por_franja(viajes: pd.DataFrame, horas_franja: int = HORAS_FRANJA) -> pd.DataFrame:
     """
     Calcula salidas, llegadas y flujo neto por estación
-    y franja fija de 3 horas.
+    y franja configurable para P2.
 
     Recibe viajes previamente limpiados.
     """
@@ -396,14 +402,14 @@ def flujo_por_franja(viajes: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("Faltan columnas requeridas en viajes")
 
     salidas = (
-        viajes.assign(fecha_franja=viajes["inicio"].dt.floor("3h"))
+        viajes.assign(fecha_franja=viajes["inicio"].dt.floor(f"{horas_franja}h"))
         .groupby(["origen_id", "fecha_franja"])
         .size()
         .rename("salidas")
     )
 
     llegadas = (
-        viajes.assign(fecha_franja=viajes["fin"].dt.floor("3h"))
+        viajes.assign(fecha_franja=viajes["fin"].dt.floor(f"{horas_franja}h"))
         .groupby(["destino_id", "fecha_franja"])
         .size()
         .rename("llegadas")
@@ -424,7 +430,7 @@ def flujo_por_franja(viajes: pd.DataFrame) -> pd.DataFrame:
     franjas = pd.date_range(
         start=resultado["fecha_franja"].min(),
         end=resultado["fecha_franja"].max(),
-        freq="3h",
+        freq=f"{horas_franja}h",
     )
 
     estaciones = resultado["estacion_id"].unique()
@@ -490,7 +496,7 @@ def agregar_rezagos_flujo(
 def etiquetar_riesgo(
     flujos: pd.DataFrame,
     estaciones: pd.DataFrame,
-    alpha: float = 0.5,
+    alpha: float = ALFA_RIESGO,
 ) -> pd.DataFrame:
     """
     Clasifica el riesgo de cada estación y franja a partir
@@ -544,7 +550,7 @@ def etiquetar_riesgo(
 def preparar_datos_p2(
     flujos: pd.DataFrame,
     estaciones: pd.DataFrame,
-    alpha: float = 0.5,
+    alpha: float = ALFA_RIESGO,
 ) -> pd.DataFrame:
     """
     Prepara la tabla de P2 para predecir el riesgo
@@ -580,22 +586,22 @@ def preparar_datos_p2(
 
 def perfiles_estacion(
     viajes: pd.DataFrame,
+    desde: str = FECHA_INICIO,
+    hasta: str = INICIO_VALIDACION,
 ) -> pd.DataFrame:
     """
     Construye perfiles horarios normalizados por estación
-    utilizando exclusivamente viajes del entrenamiento.
+    utilizando viajes del periodo [desde, hasta) para P3; por defecto entrenamiento.
 
     Devuelve una fila por estación y 96 variables horarias.
     """
-    from mibici.config import FECHA_INICIO, INICIO_VALIDACION
-
     columnas = {"inicio", "fin", "origen_id", "destino_id"}
 
     if not columnas.issubset(viajes.columns):
         raise ValueError("Faltan columnas requeridas en viajes")
 
-    inicio = pd.Timestamp(FECHA_INICIO)
-    corte = pd.Timestamp(INICIO_VALIDACION)
+    inicio = pd.Timestamp(desde)
+    corte = pd.Timestamp(hasta)
 
     # Filtrar por inicio del viaje para evitar fuga temporal
     df = viajes.loc[
