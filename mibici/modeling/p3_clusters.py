@@ -1,4 +1,10 @@
-"""Agrupación de estaciones P3 con selección exclusivamente en perfiles de entrenamiento."""
+"""P3 · Agrupación de estaciones por patrón de uso, ajustada solo con perfiles de entrenamiento.
+
+Cada modelo es una receta de `MODELOS`; `comun.ejecutar` la entrena, la evalúa y la registra.
+Las métricas (silueta principal, Davies-Bouldin, Calinski-Harabasz y ARI) son las de la entrega
+anterior. Los modelos servibles se registran como Pipeline (variables, imputación, escala y
+algoritmo) para que reciban perfiles crudos y devuelvan el grupo.
+"""
 
 from itertools import combinations
 
@@ -14,11 +20,16 @@ from sklearn.metrics import (
 )
 from sklearn.metrics.pairwise import pairwise_distances_argmin
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
-from mibici.config import N_SEMILLAS_P3, RANGO_K_P3, SEMILLA
-from mibici.modeling.comun import parametros_conjuntos, registrar_resultado
+from mibici.config import FECHA_FIN, INICIO_PRUEBA, INICIO_VALIDACION, N_SEMILLAS_P3, SEMILLA
+from mibici.dataset import cargar_estaciones, cargar_viajes
+from mibici.features import limpiar_viajes, perfiles_estacion
+from mibici.modeling.comun import Modelo, Resultado, parametros_conjuntos
 from mibici.plots import figuras_clusters
+
+PREGUNTA = "p3"
+PERIODOS = ("train", "val", "test")
 
 
 def matriz_perfiles(perfiles):
@@ -54,104 +65,200 @@ def metricas_clusters(matriz, etiquetas):
     }
 
 
-def seleccionar_clusters(matriz, tipo):
-    """Elige k de P3 únicamente por silueta train; nunca recibe perfiles de val/test."""
-    filas, mejor = [], None
-    for k in RANGO_K_P3:
-        if not 1 < k < len(matriz):
-            continue
-        modelo = (
-            KMeans(n_clusters=k, n_init=10, random_state=SEMILLA)
-            if tipo == "kmeans"
-            else AgglomerativeClustering(n_clusters=k, linkage="ward")
-        )
-        etiquetas = modelo.fit_predict(matriz)
-        metricas = metricas_clusters(matriz, etiquetas)
-        if "silueta" not in metricas:
-            continue
-        filas.append({"k": k, "train_silueta": metricas["silueta"]})
-        if mejor is None or metricas["silueta"] > mejor[0]:
-            mejor = (metricas["silueta"], modelo, etiquetas)
-    if mejor is None:
-        raise ValueError("P3 requiere al menos tres estaciones con perfiles distintos")
-    return mejor[1], mejor[2], pd.DataFrame(filas)
+def entradas(perfiles):
+    """Columnas que recibe el modelo servible: el perfil de la estación sin su identificador."""
+    return perfiles.drop(columns=["estacion_id"])
 
 
-def entrenar_p3(entrenamiento, validacion, prueba, estaciones):
-    """Ejecuta municipio, KMeans y Ward de P3; evalúa periodos después de seleccionar k train."""
-    # El universo queda fijado por train y el catálogo; periodos posteriores solo se intersectan.
+def construir_conjuntos(entrenamiento, validacion, prueba, estaciones):
+    """Fija el universo de estaciones con train y el catálogo; periodos posteriores se intersectan."""
     perfiles = entrenamiento.merge(
         estaciones[["estacion_id"]], on="estacion_id", validate="one_to_one"
     )
     catalogo = perfiles[["estacion_id"]].merge(estaciones, on="estacion_id", validate="one_to_one")
+    return {"train": perfiles, "val": validacion, "test": prueba, "catalogo": catalogo}
+
+
+def preparar_conjuntos():
+    """Carga los viajes procesados y construye los perfiles de train, val y test de P3."""
+    estaciones = cargar_estaciones()
+    viajes = limpiar_viajes(cargar_viajes(), estaciones)
+    return construir_conjuntos(
+        perfiles_estacion(viajes),
+        perfiles_estacion(viajes, desde=INICIO_VALIDACION, hasta=INICIO_PRUEBA),
+        perfiles_estacion(
+            viajes, desde=INICIO_PRUEBA, hasta=pd.Timestamp(FECHA_FIN) + pd.Timedelta(days=1)
+        ),
+        estaciones,
+    )
+
+
+def datos_prediccion(conjuntos):
+    """Perfiles de prueba de P3 (sin objetivo: es agrupación) para verificar el modelo."""
+    return conjuntos["test"], None
+
+
+def construir_kmeans(k, semilla=SEMILLA):
+    """Pipeline servible de P3: variables de perfil, imputación, escala y KMeans."""
+    return make_pipeline(
+        FunctionTransformer(matriz_perfiles),
+        SimpleImputer(strategy="median", keep_empty_features=True),
+        StandardScaler(),
+        KMeans(n_clusters=k, n_init=10, random_state=semilla),
+    )
+
+
+def evaluar_periodos(conjuntos, etiquetas, transformar, asignar):
+    """Mide en val y test la separación de los grupos de train y su consistencia (ARI periodo).
+
+    Solo se evalúan las estaciones de train presentes en cada periodo; la escala es la de train.
+    """
+    perfiles = conjuntos["train"]
+    metricas, tamanos = {}, {}
+    for periodo in ("val", "test"):
+        comunes = (
+            perfiles[["estacion_id"]]
+            .assign(etiqueta_train=etiquetas)
+            .merge(conjuntos[periodo], on="estacion_id", validate="one_to_one")
+        )
+        tamanos[f"n_comunes_{periodo}"] = len(comunes)
+        if comunes.empty:
+            continue
+        nueva = transformar(comunes)
+        separacion = metricas_clusters(nueva, comunes["etiqueta_train"].to_numpy())
+        if "silueta" in separacion:
+            metricas[f"{periodo}_silueta"] = separacion["silueta"]
+        if asignar is not None:
+            metricas[f"{periodo}_ari_periodo"] = float(
+                adjusted_rand_score(comunes["etiqueta_train"], asignar(comunes, nueva))
+            )
+    return metricas, tamanos
+
+
+def _params(nombre, conjuntos, k, extra):
+    """Parámetros comunes de P3: variables, tamaños de periodo, k y nota de métricas."""
+    periodos = {p: conjuntos[p] for p in PERIODOS}
+    params = parametros_conjuntos(nombre, matriz_perfiles(conjuntos["train"]).columns, periodos)
+    params.update(
+        {
+            "n_grupos": k,
+            "metricas_indefinidas": "omitidas si grupos no esta entre 2 y n-1",
+            "periodos": "interseccion con estaciones train; escala fija train",
+            **extra,
+        }
+    )
+    return params
+
+
+def entrenar_municipio(conjuntos, hiperparametros):
+    """Baseline de referencia de P3: agrupar las estaciones por municipio, sin aprendizaje."""
+    perfiles, catalogo = conjuntos["train"], conjuntos["catalogo"]
     transformador, matriz = ajustar_escala(perfiles)
-    conjuntos = {"train": perfiles, "val": validacion, "test": prueba}
-    runs = []
-    for nombre in ("municipio", "kmeans", "agglomerative-ward"):
-        rejilla = None
-        if nombre == "municipio":
-            etiquetas = catalogo["municipio"].to_numpy()
-            modelo = None
-        else:
-            modelo, etiquetas, rejilla = seleccionar_clusters(matriz, nombre)
-        params = parametros_conjuntos(nombre, matriz_perfiles(perfiles).columns, conjuntos)
-        params.update(
-            {
-                "k": len(np.unique(etiquetas)),
-                "metricas_indefinidas": "omitidas si grupos no esta entre 2 y n-1",
-                "periodos": "interseccion con estaciones train; escala fija train",
-            }
-        )
-        metricas = {f"train_{k}": v for k, v in metricas_clusters(matriz, etiquetas).items()}
-        if nombre == "kmeans":
-            params.update({"n_init": 10, "random_state": SEMILLA, "n_semillas": N_SEMILLAS_P3})
-            replicas = [
-                KMeans(
-                    n_clusters=modelo.n_clusters, n_init=10, random_state=SEMILLA + i
-                ).fit_predict(matriz)
-                for i in range(N_SEMILLAS_P3)
-            ]
-            metricas["train_ari_semillas"] = float(
-                np.mean([adjusted_rand_score(a, b) for a, b in combinations(replicas, 2)])
-            )
-        else:
-            params["ari_semillas"] = "no aplica (determinista)"
-        if nombre == "agglomerative-ward":
-            params["linkage"] = "ward"
-        if nombre == "municipio":
-            params["ari_periodo"] = "omitido: etiquetas municipales fijas darian ARI=1"
-        grupos = np.unique(etiquetas)
-        centroides = np.vstack([matriz[etiquetas == g].mean(axis=0) for g in grupos])
-        for periodo, futuros in (("val", validacion), ("test", prueba)):
-            comunes = (
-                perfiles[["estacion_id"]]
-                .assign(etiqueta_train=etiquetas)
-                .merge(futuros, on="estacion_id", validate="one_to_one")
-            )
-            params[f"n_{periodo}"] = len(comunes)
-            if comunes.empty:
-                continue
-            nueva = transformador.transform(matriz_perfiles(comunes))
-            separacion = metricas_clusters(nueva, comunes["etiqueta_train"].to_numpy())
-            if "silueta" in separacion:
-                metricas[f"{periodo}_silueta"] = separacion["silueta"]
-            if nombre != "municipio":
-                asignadas = (
-                    modelo.predict(nueva)
-                    if nombre == "kmeans"
-                    else grupos[pairwise_distances_argmin(nueva, centroides)]
-                )
-                metricas[f"{periodo}_ari_periodo"] = float(
-                    adjusted_rand_score(comunes["etiqueta_train"], asignadas)
-                )
-        runs.append(
-            registrar_resultado(
-                "P3",
-                f"p3-{nombre}",
-                params,
-                metricas,
-                figuras_clusters(perfiles, catalogo, etiquetas),
-                {"busqueda_k": rejilla} if rejilla is not None else None,
-            )
-        )
-    return runs
+    etiquetas = catalogo["municipio"].to_numpy()
+    metricas = {f"train_{k}": v for k, v in metricas_clusters(matriz, etiquetas).items()}
+    periodo, tamanos = evaluar_periodos(
+        conjuntos, etiquetas, lambda c: transformador.transform(matriz_perfiles(c)), None
+    )
+    params = _params(
+        "municipio",
+        conjuntos,
+        len(np.unique(etiquetas)),
+        {**tamanos, "ari_periodo": "omitido: etiquetas municipales fijas darian ARI=1"},
+    )
+    return Resultado(
+        {**metricas, **periodo},
+        params,
+        figuras_clusters(perfiles, catalogo, etiquetas),
+        entrenamiento=entradas(perfiles),
+    )
+
+
+def entrenar_kmeans(conjuntos, hiperparametros):
+    """Candidato servible de P3: KMeans sobre los perfiles escalados con la media de train."""
+    perfiles, catalogo = conjuntos["train"], conjuntos["catalogo"]
+    k = int(hiperparametros["k"])
+    modelo = construir_kmeans(k).fit(entradas(perfiles))
+    preparar = modelo[:-1]
+    matriz = preparar.transform(entradas(perfiles))
+    etiquetas = modelo[-1].labels_
+    metricas = {f"train_{n}": v for n, v in metricas_clusters(matriz, etiquetas).items()}
+    replicas = [
+        KMeans(n_clusters=k, n_init=10, random_state=SEMILLA + i).fit_predict(matriz)
+        for i in range(N_SEMILLAS_P3)
+    ]
+    metricas["train_ari_semillas"] = float(
+        np.mean([adjusted_rand_score(a, b) for a, b in combinations(replicas, 2)])
+    )
+    periodo, tamanos = evaluar_periodos(
+        conjuntos,
+        etiquetas,
+        lambda c: preparar.transform(entradas(c[perfiles.columns])),
+        lambda c, nueva: modelo[-1].predict(nueva),
+    )
+    params = _params(
+        "kmeans",
+        conjuntos,
+        k,
+        {
+            **tamanos,
+            **hiperparametros,
+            "n_init": 10,
+            "random_state": SEMILLA,
+            "n_semillas": N_SEMILLAS_P3,
+        },
+    )
+    return Resultado(
+        {**metricas, **periodo},
+        params,
+        figuras_clusters(perfiles, catalogo, etiquetas),
+        modelo=modelo,
+        ejemplo=entradas(perfiles).head(5),
+        entrenamiento=entradas(perfiles),
+        x_prueba=entradas(conjuntos["test"][perfiles.columns]),
+    )
+
+
+def entrenar_ward(conjuntos, hiperparametros):
+    """Candidato de comparación de P3: Ward jerárquico.
+
+    AgglomerativeClustering no tiene `predict` para estaciones nuevas, así que no se registra un
+    modelo servible; los periodos se asignan al centroide de train más cercano.
+    """
+    perfiles, catalogo = conjuntos["train"], conjuntos["catalogo"]
+    k = int(hiperparametros["k"])
+    transformador, matriz = ajustar_escala(perfiles)
+    etiquetas = AgglomerativeClustering(n_clusters=k, linkage="ward").fit_predict(matriz)
+    metricas = {f"train_{n}": v for n, v in metricas_clusters(matriz, etiquetas).items()}
+    grupos = np.unique(etiquetas)
+    centroides = np.vstack([matriz[etiquetas == g].mean(axis=0) for g in grupos])
+    periodo, tamanos = evaluar_periodos(
+        conjuntos,
+        etiquetas,
+        lambda c: transformador.transform(matriz_perfiles(c)),
+        lambda c, nueva: grupos[pairwise_distances_argmin(nueva, centroides)],
+    )
+    params = _params(
+        "ward",
+        conjuntos,
+        k,
+        {
+            **tamanos,
+            **hiperparametros,
+            "linkage": "ward",
+            "ari_semillas": "no aplica (determinista)",
+            "servible": "no: AgglomerativeClustering no tiene predict",
+        },
+    )
+    return Resultado(
+        {**metricas, **periodo},
+        params,
+        figuras_clusters(perfiles, catalogo, etiquetas),
+        entrenamiento=entradas(perfiles),
+    )
+
+
+MODELOS = {
+    "municipio": Modelo("naive", entrenar_municipio, baseline=True),
+    "kmeans": Modelo("clustering", entrenar_kmeans, hiperparametros=("k",)),
+    "ward": Modelo("clustering", entrenar_ward, hiperparametros=("k",)),
+}

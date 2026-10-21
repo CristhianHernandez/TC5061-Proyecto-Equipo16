@@ -1,64 +1,85 @@
-"""CLI DH4: carga datos procesados y ejecuta experimentos P1, P2 y P3."""
+"""Entrada `train` del MLflow Project: entrena un modelo de P1, P2 o P3 y lo registra en MLflow.
+
+Uso (siempre a través del MLflow Project):
+
+    mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \\
+        -P question=p1 -P model=hgb -P learning_rate=0.05 -P max_leaf_nodes=63
+
+Los parámetros vacíos se resuelven con config.py: sin `model` se entrena el baseline de la
+pregunta y sin hiperparámetros se usan los de `HIPERPARAMETROS`. Con `search=true` se ejecuta la
+búsqueda de `REJILLAS` como nested runs.
+"""
 
 from time import perf_counter
 
 from loguru import logger
-import pandas as pd
 import typer
 
-from mibici.config import (
-    ALFA_RIESGO,
-    FECHA_FIN,
-    FECHA_INICIO,
-    INICIO_PRUEBA,
-    INICIO_VALIDACION,
-    VIAJES_DIR,
-)
-from mibici.dataset import cargar_estaciones, cargar_viajes
-from mibici.features import (
-    flujo_por_franja,
-    limpiar_viajes,
-    perfiles_estacion,
-    preparar_datos_p1,
-    preparar_datos_p2,
-)
-from mibici.modeling.p1_demanda import entrenar_p1
-from mibici.modeling.p2_riesgo import entrenar_p2
-from mibici.modeling.p3_clusters import entrenar_p3
+from mibici.modeling.comun import ejecutar
 
 app = typer.Typer()
 
 
+def convertir(valor: str):
+    """Convierte el texto recibido por -P al tipo de Python: entero, flotante, None o texto."""
+    texto = valor.strip()
+    if texto.lower() in ("none", "null"):
+        return None
+    for tipo in (int, float):
+        try:
+            return tipo(texto)
+        except ValueError:
+            pass
+    return texto
+
+
+def hiperparametros_dados(**valores: str) -> dict:
+    """Conserva solo los hiperparámetros que se pasaron (los vacíos se toman de config.py)."""
+    return {nombre: convertir(valor) for nombre, valor in valores.items() if valor.strip()}
+
+
 @app.command()
-def main(pregunta: str = "todas"):
-    """Entrena P1/P2/P3 o todas con datos locales, sin descargas ni reajuste train+val."""
-    pregunta = pregunta.upper()
-    if pregunta not in ("P1", "P2", "P3", "TODAS"):
-        raise typer.BadParameter("Usa P1, P2, P3 o todas", param_hint="--pregunta")
+def main(
+    question: str = typer.Option("p1", help="Pregunta: p1, p2 o p3"),
+    model: str = typer.Option("", help="Modelo; vacío entrena el baseline de la pregunta"),
+    stage: str = typer.Option("", help="baseline, search, candidate o analysis; vacío lo deduce"),
+    search: str = typer.Option("false", help="true para una búsqueda con nested runs"),
+    learning_rate: str = typer.Option(""),
+    max_leaf_nodes: str = typer.Option(""),
+    max_iter: str = typer.Option(""),
+    n_estimators: str = typer.Option(""),
+    max_depth: str = typer.Option(""),
+    c: str = typer.Option("", "--C", help="Regularización inversa (logística)"),
+    class_weight: str = typer.Option(""),
+    k: str = typer.Option("", help="Número de grupos (P3)"),
+    n_components: str = typer.Option(""),
+):
+    """Entrena y registra un modelo de una pregunta como corrida del experimento del equipo."""
+    if search.strip().lower() not in ("true", "false"):
+        raise typer.BadParameter("Usa true o false", param_hint="--search")
+    hiperparametros = hiperparametros_dados(
+        learning_rate=learning_rate,
+        max_leaf_nodes=max_leaf_nodes,
+        max_iter=max_iter,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        C=c,
+        class_weight=class_weight,
+        k=k,
+        n_components=n_components,
+    )
     inicio = perf_counter()
-    estaciones = cargar_estaciones()
-    viajes = limpiar_viajes(cargar_viajes(), estaciones)
-    if pregunta in ("P1", "TODAS"):
-        # Pipeline de HH2: demanda diaria con ceros, calendario, rezagos y primera actividad
-        entrenar_p1(preparar_datos_p1(VIAJES_DIR, estaciones, FECHA_INICIO, FECHA_FIN), estaciones)
-    if pregunta in ("P2", "TODAS"):
-        # Las estaciones sin capacidad válida no permiten definir el proxy P2.
-        catalogo = estaciones.loc[estaciones["capacidad"] > 0]
-        flujos = flujo_por_franja(viajes)
-        flujos = flujos.loc[flujos["estacion_id"].isin(catalogo["estacion_id"])]
-        entrenar_p2(preparar_datos_p2(flujos, catalogo, alpha=ALFA_RIESGO), catalogo)
-    if pregunta in ("P3", "TODAS"):
-        entrenar_p3(
-            perfiles_estacion(viajes),
-            perfiles_estacion(viajes, desde=INICIO_VALIDACION, hasta=INICIO_PRUEBA),
-            perfiles_estacion(
-                viajes,
-                desde=INICIO_PRUEBA,
-                hasta=pd.Timestamp(FECHA_FIN) + pd.Timedelta(days=1),
-            ),
-            estaciones,
+    try:
+        run_id = ejecutar(
+            question,
+            model.strip() or None,
+            stage.strip() or None,
+            hiperparametros,
+            search=search.strip().lower() == "true",
         )
-    logger.success("Experimentos completados en {:.2f} segundos", perf_counter() - inicio)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    logger.success(f"Corrida {run_id} terminada en {perf_counter() - inicio:.1f} s")
 
 
 if __name__ == "__main__":

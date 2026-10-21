@@ -6,6 +6,7 @@ import typer
 
 from mibici.config import (
     ALFA_RIESGO,
+    FECHA_FIN,
     FECHA_INICIO,
     HORAS_FRANJA,
     INICIO_VALIDACION,
@@ -678,8 +679,8 @@ def perfiles_estacion(
 
 @app.command()
 def main(
-    fecha_inicio: str = "2024-10-01",
-    fecha_fin: str = "2026-09-30",
+    fecha_inicio: str = FECHA_INICIO,
+    fecha_fin: str = FECHA_FIN,
 ):
     """Genera las características de demanda diaria para P1."""
     from mibici.config import ESTACIONES_PARQUET, VIAJES_DIR

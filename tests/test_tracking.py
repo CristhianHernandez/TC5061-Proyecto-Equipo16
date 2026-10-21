@@ -59,3 +59,44 @@ def test_run_lleva_tags_params_y_metricas(mlflow_temporal):
     assert datos.params["version_datos"] == tracking.version_datos(mlflow_temporal)
     assert datos.params["semilla"] == "16"
     assert datos.metrics == {"val_mae": 1.5}
+    assert datos.tags["question"] == "p1"
+    assert datos.tags["version_datos"] == datos.params["version_datos"]
+
+
+def test_reanuda_el_run_creado_por_mlflow_run(mlflow_temporal, monkeypatch):
+    """Bajo `mlflow run` se usa el run de MLFLOW_RUN_ID y se libera para los runs anidados."""
+    mlflow.set_tracking_uri(tracking.MLFLOW_TRACKING_URI)
+    experimento = mlflow.set_experiment("mibici-equipo16")
+    creado = mlflow.MlflowClient().create_run(experimento.experiment_id).info.run_id
+    monkeypatch.setenv("MLFLOW_RUN_ID", creado)
+    with tracking.iniciar_run(
+        "P2", "p2-hgb", {"modelo": "hgb"}, {"stage_of_work": "search", "model_family": "boosting"}
+    ) as run:
+        assert run.info.run_id == creado
+        assert "MLFLOW_RUN_ID" not in tracking.os.environ
+        with tracking.iniciar_run_anidado("p2-hgb-hijo", {"learning_rate": 0.1}) as hijo:
+            assert hijo.info.run_id != creado
+    padre = mlflow.get_run(creado)
+    assert padre.info.run_name == "p2-hgb"
+    assert padre.data.tags["stage_of_work"] == "search"
+    hijo = mlflow.get_run(hijo.info.run_id)
+    assert hijo.data.tags["mlflow.parentRunId"] == creado
+    assert hijo.data.tags["question"] == "p2"
+    assert hijo.data.tags["model_family"] == "boosting"
+
+
+def test_rechaza_run_de_otro_experimento(mlflow_temporal, monkeypatch):
+    mlflow.set_tracking_uri(tracking.MLFLOW_TRACKING_URI)
+    otro = mlflow.set_experiment("Default-otro")
+    creado = mlflow.MlflowClient().create_run(otro.experiment_id).info.run_id
+    monkeypatch.setenv("MLFLOW_RUN_ID", creado)
+    with pytest.raises(ValueError, match="--experiment-name"), tracking.iniciar_run("P1", "x"):
+        pass
+
+
+def test_rechaza_etapa_desconocida(mlflow_temporal):
+    with (
+        pytest.raises(ValueError, match="stage_of_work"),
+        tracking.iniciar_run("P1", "x", etiquetas={"stage_of_work": "produccion"}),
+    ):
+        pass

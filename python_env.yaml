@@ -1,0 +1,6 @@
+python: "3.13"
+build_dependencies:
+  - pip
+dependencies:
+  # Mismas versiones fijas del proyecto (incluye el paquete mibici en modo editable)
+  - -r requirements.txt

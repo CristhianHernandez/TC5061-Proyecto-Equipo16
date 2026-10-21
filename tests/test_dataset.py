@@ -149,3 +149,23 @@ def test_generar_manifiesto(tmp_path, monkeypatch):
     assert contenido["archivos"][0]["sha256"] == hashlib.sha256(
         b"datos de prueba"
     ).hexdigest()
+
+
+def test_ingesta_bajo_mlflow_run_registra_version_de_datos(tmp_path, monkeypatch):
+    import mlflow
+
+    manifiesto = tmp_path / "manifiesto_datos.json"
+    manifiesto.write_text('{"archivos": []}')
+    monkeypatch.chdir(tmp_path)  # los artefactos locales de MLflow van a tmp_path/mlruns
+    monkeypatch.setattr(dataset, "MANIFIESTO_DATOS", manifiesto)
+    mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
+    experimento = mlflow.set_experiment("mibici-equipo16")
+    creado = mlflow.MlflowClient().create_run(experimento.experiment_id).info.run_id
+    monkeypatch.setenv("MLFLOW_RUN_ID", creado)
+    dataset.registrar_ingesta()
+    run = mlflow.get_run(creado)
+    assert run.info.run_name == "ingesta"
+    assert len(run.data.params["version_datos"]) == 12
+    assert run.data.params["meses"] == "24"
+    rutas = [a.path for a in mlflow.MlflowClient().list_artifacts(creado, "data")]
+    assert rutas == ["data/manifiesto_datos.json"]

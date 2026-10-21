@@ -1,14 +1,28 @@
-"""Baselines y regresión Poisson para la demanda diaria de P1."""
+"""P1 · Regresión de la demanda diaria por estación (D+1): baselines y modelos candidatos.
+
+Cada modelo es una receta de `MODELOS`; `comun.ejecutar` la entrena, la evalúa y la registra.
+La partición temporal y las métricas (MAE principal, RMSE y desviación Poisson) son las mismas de
+la entrega anterior, para que la comparación contra el baseline sea válida.
+"""
 
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_poisson_deviance, root_mean_squared_error
 
-from mibici.config import ITERACIONES_HGB, MINIMO_POISSON, REJILLA_P1, SEMILLA
-from mibici.features import particion_temporal
-from mibici.modeling.comun import parametros_conjuntos, registrar_resultado, seleccionar_modelo
+from mibici.config import FECHA_FIN, FECHA_INICIO, MINIMO_POISSON, SEMILLA, VIAJES_DIR
+from mibici.dataset import cargar_estaciones
+from mibici.features import particion_temporal, preparar_datos_p1
+from mibici.modeling.comun import (
+    Modelo,
+    Resultado,
+    estabilidad_mensual,
+    metricas_con_prefijo,
+    parametros_conjuntos,
+)
 from mibici.plots import figura_demanda
 
+PREGUNTA = "p1"
+OBJETIVO = "demanda"
 VARIABLES = [
     "dia_semana",
     "mes",
@@ -22,6 +36,29 @@ VARIABLES = [
     "latitud",
     "longitud",
 ]
+
+
+def construir_conjuntos(datos, estaciones):
+    """Une capacidad y ubicación a la demanda diaria y aplica la partición temporal de config.py."""
+    datos = datos.merge(
+        estaciones[["estacion_id", "capacidad", "latitud", "longitud"]],
+        on="estacion_id",
+        how="left",
+        validate="many_to_one",
+    )
+    return dict(zip(("train", "val", "test"), particion_temporal(datos)))
+
+
+def preparar_conjuntos():
+    """Carga los datos procesados y construye train, val y test de P1 (sin descargar nada)."""
+    estaciones = cargar_estaciones()
+    datos = preparar_datos_p1(VIAJES_DIR, estaciones, FECHA_INICIO, FECHA_FIN)
+    return construir_conjuntos(datos, estaciones)
+
+
+def datos_prediccion(conjuntos):
+    """Conjunto de prueba de P1 y su columna objetivo, para verificar el modelo en producción."""
+    return conjuntos["test"], OBJETIVO
 
 
 def predecir_promedio(entrenamiento, datos):
@@ -51,102 +88,119 @@ def metricas_demanda(real, prediccion):
     }
 
 
-def seleccionar_demanda(entrenamiento, validacion):
-    """Selecciona HGB de P1 por MAE de validación; ajuste fijo solo en train, sin prueba."""
-    return seleccionar_modelo(
-        entrenamiento,
-        validacion,
-        VARIABLES,
-        "demanda",
-        lambda p: HistGradientBoostingRegressor(
-            loss="poisson",
-            random_state=SEMILLA,
-            max_iter=ITERACIONES_HGB,
-            early_stopping=False,
-            **p,
-        ),
-        REJILLA_P1,
-        mean_absolute_error,
-    )
+def evaluar(conjuntos, predecir):
+    """Evalúa P1 en los tres conjuntos, por rebanadas de demanda alta/baja y su estabilidad.
 
-
-def entrenar_p1(datos, estaciones):
-    """Ejecuta los tres runs de P1, selecciona con val y evalúa prueba una sola vez por modelo."""
-    datos = datos.merge(
-        estaciones[["estacion_id", "capacidad", "latitud", "longitud"]],
-        on="estacion_id",
-        how="left",
-        validate="many_to_one",
-    )
-    conjuntos = dict(zip(("train", "val", "test"), particion_temporal(datos)))
+    Las rebanadas se definen con la demanda media de train; la estabilidad es la desviación
+    estándar del MAE mes a mes en prueba.
+    """
     entrenamiento = conjuntos["train"]
-    modelo, parametros, rejilla = seleccionar_demanda(entrenamiento, conjuntos["val"])
     medias = entrenamiento.groupby("estacion_id")["demanda"].mean()
     altas = medias.index[medias >= medias.median()]
-    runs = []
-    for nombre in ("naive-estacional", "promedio-estacion-dia", "hgb-poisson"):
-        predicciones = {}
-        metricas = {}
-        for conjunto, filas in conjuntos.items():
-            if nombre == "hgb-poisson":
-                prediccion = modelo.predict(filas[VARIABLES])
-            else:
-                funcion = predecir_naive if nombre == "naive-estacional" else predecir_promedio
-                prediccion = funcion(entrenamiento, filas)
-            predicciones[conjunto] = prediccion
-            valores = metricas_demanda(filas["demanda"], prediccion)
-            mascara = filas["estacion_id"].isin(altas).to_numpy()
-            for rebanada, seleccion in (("alta", mascara), ("baja", ~mascara)):
-                if seleccion.any():
-                    valores[f"mae_{rebanada}_demanda"] = float(
-                        mean_absolute_error(
-                            filas["demanda"].to_numpy()[seleccion], prediccion[seleccion]
-                        )
+    metricas, predicciones = {}, {}
+    for conjunto, filas in conjuntos.items():
+        prediccion = np.asarray(predecir(filas), dtype=float)
+        predicciones[conjunto] = prediccion
+        valores = metricas_demanda(filas["demanda"], prediccion)
+        mascara = filas["estacion_id"].isin(altas).to_numpy()
+        for rebanada, seleccion in (("alta", mascara), ("baja", ~mascara)):
+            if seleccion.any():
+                valores[f"mae_{rebanada}_demanda"] = float(
+                    mean_absolute_error(
+                        filas["demanda"].to_numpy()[seleccion], prediccion[seleccion]
                     )
-            if nombre != "hgb-poisson":
-                valores["fraccion_respaldo"] = float(
-                    filas["demanda_lag_7"].isna().mean()
-                    if nombre == "naive-estacional"
-                    else (
-                        ~filas.set_index(["estacion_id", "dia_semana"]).index.isin(
-                            entrenamiento.set_index(["estacion_id", "dia_semana"]).index
-                        )
-                    ).mean()
                 )
-            metricas.update({f"{conjunto}_{k}": v for k, v in valores.items()})
-        params = parametros_conjuntos(
-            nombre,
-            VARIABLES
-            if nombre == "hgb-poisson"
-            else ["estacion_id", "dia_semana"]
-            + (["demanda_lag_7"] if nombre == "naive-estacional" else []),
+        metricas.update(metricas_con_prefijo(conjunto, valores))
+    prueba = conjuntos["test"]
+    metricas["test_mae_std_mensual"] = estabilidad_mensual(
+        prueba["fecha"], prueba["demanda"].to_numpy(), predicciones["test"], mean_absolute_error
+    )
+    return metricas, predicciones
+
+
+def _respaldo(conjuntos, columnas_faltantes):
+    """Fracción de filas que usan el respaldo de un baseline, por conjunto."""
+    return {f"{c}_fraccion_respaldo": float(columnas_faltantes(f)) for c, f in conjuntos.items()}
+
+
+def entrenar_naive(conjuntos, hiperparametros):
+    """Baseline de referencia de P1: misma demanda que hace 7 días (naive estacional)."""
+    entrenamiento = conjuntos["train"]
+    metricas, predicciones = evaluar(conjuntos, lambda f: predecir_naive(entrenamiento, f))
+    metricas.update(_respaldo(conjuntos, lambda f: f["demanda_lag_7"].isna().mean()))
+    params = parametros_conjuntos(
+        "naive", ["estacion_id", "dia_semana", "demanda_lag_7"], conjuntos
+    )
+    params.update(
+        {
+            "clip_poisson": MINIMO_POISSON,
+            "respaldo": "media train estacion×dia; luego media global train",
+        }
+    )
+    return Resultado(
+        metricas,
+        params,
+        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        entrenamiento=entrenamiento[["estacion_id", "dia_semana", "demanda_lag_7", OBJETIVO]],
+        objetivo=OBJETIVO,
+    )
+
+
+def entrenar_promedio(conjuntos, hiperparametros):
+    """Baseline alterno de P1: media de train por estación y día de la semana."""
+    entrenamiento = conjuntos["train"]
+    vistos = entrenamiento.set_index(["estacion_id", "dia_semana"]).index
+    metricas, predicciones = evaluar(conjuntos, lambda f: predecir_promedio(entrenamiento, f))
+    metricas.update(
+        _respaldo(
             conjuntos,
+            lambda f: (~f.set_index(["estacion_id", "dia_semana"]).index.isin(vistos)).mean(),
         )
-        params["clip_poisson"] = MINIMO_POISSON
-        if nombre != "hgb-poisson":
-            params["respaldo"] = (
-                "media train estacion×dia; luego media global train"
-                if nombre == "naive-estacional"
-                else "media global train"
-            )
-        if nombre == "hgb-poisson":
-            params.update(
-                {
-                    **parametros,
-                    "max_iter": ITERACIONES_HGB,
-                    "loss": "poisson",
-                    "early_stopping": False,
-                    "random_state": SEMILLA,
-                }
-            )
-        runs.append(
-            registrar_resultado(
-                "P1",
-                f"p1-{nombre}",
-                params,
-                metricas,
-                {"demanda": figura_demanda(conjuntos, predicciones)},
-                {"rejilla": rejilla} if nombre == "hgb-poisson" else None,
-            )
-        )
-    return runs
+    )
+    params = parametros_conjuntos("promedio", ["estacion_id", "dia_semana"], conjuntos)
+    params.update({"clip_poisson": MINIMO_POISSON, "respaldo": "media global train"})
+    return Resultado(
+        metricas,
+        params,
+        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        entrenamiento=entrenamiento[["estacion_id", "dia_semana", OBJETIVO]],
+        objetivo=OBJETIVO,
+    )
+
+
+def entrenar_hgb(conjuntos, hiperparametros):
+    """Candidato de P1: gradient boosting con pérdida Poisson, adecuada para conteos."""
+    entrenamiento = conjuntos["train"]
+    modelo = HistGradientBoostingRegressor(
+        loss="poisson", random_state=SEMILLA, early_stopping=False, **hiperparametros
+    ).fit(entrenamiento[VARIABLES], entrenamiento[OBJETIVO])
+    metricas, predicciones = evaluar(conjuntos, lambda f: modelo.predict(f[VARIABLES]))
+    params = parametros_conjuntos("hgb", VARIABLES, conjuntos)
+    params.update(
+        {
+            **hiperparametros,
+            "loss": "poisson",
+            "early_stopping": False,
+            "random_state": SEMILLA,
+            "clip_poisson": MINIMO_POISSON,
+        }
+    )
+    return Resultado(
+        metricas,
+        params,
+        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        modelo=modelo,
+        ejemplo=entrenamiento[VARIABLES].head(5),
+        entrenamiento=entrenamiento[VARIABLES + [OBJETIVO]],
+        objetivo=OBJETIVO,
+        x_prueba=conjuntos["test"][VARIABLES],
+    )
+
+
+MODELOS = {
+    "naive": Modelo("naive", entrenar_naive, baseline=True),
+    "promedio": Modelo("naive", entrenar_promedio, baseline=True),
+    "hgb": Modelo(
+        "boosting", entrenar_hgb, hiperparametros=("learning_rate", "max_leaf_nodes", "max_iter")
+    ),
+}

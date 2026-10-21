@@ -6,8 +6,8 @@
 
 Predicción de demanda, riesgo de desabasto y clustering de estaciones de MiBici, el sistema de bicicleta
 pública del Área Metropolitana de Guadalajara. Este repositorio es la base reproducible del proyecto
-integrador de TC5061: ingesta versionada, variables sin fuga del futuro, baselines y candidatos por
-pregunta, y un experimento en MLflow.
+integrador de TC5061: ingesta versionada, variables sin fuga del futuro y un **MLflow Project** que
+entrena, compara y lleva a producción un modelo por pregunta mediante el Model Registry.
 
 ## Preguntas
 
@@ -41,94 +41,199 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ## Estructura del repositorio
 
 ```
-├── Makefile               <- make data, make mlflow, make train, make lint, make test
+├── MLproject              <- MLflow Project: entradas ingest, train, register y predict
+├── python_env.yaml        <- entorno del proyecto (Python 3.13 + requirements.txt)
+├── Makefile               <- atajos: make mlflow, data, baselines, train, register, predict, lint, test
 ├── README.md
-├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet)
+├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
 ├── docs/                  <- auditoría de la entrega
-├── models/                <- reservado para modelos serializados (fuera de Git)
+├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
-├── reports/figures/       <- figuras generadas (fuera de Git, salvo .gitkeep)
+├── reports/figures/       <- copia local de las gráficas (fuera de Git, salvo .gitkeep)
 ├── requirements.txt       <- dependencias con versión fija
-├── tests/                 <- pruebas con datos sintéticos (pytest)
+├── tests/                 <- pruebas con datos sintéticos y MLflow temporal (pytest)
 └── mibici/
-    ├── config.py          <- única fuente de rutas, fechas, semillas, URLs y parámetros
-    ├── dataset.py         <- descarga, normalización, eliminación de datos personales y manifiesto
+    ├── config.py          <- única fuente de rutas, fechas, semillas, hiperparámetros y nombres del registry
+    ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
-    ├── tracking.py        <- apertura de runs de MLflow con tags y parámetros obligatorios
+    ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
     ├── plots.py           <- figuras que se registran como artefactos
     └── modeling/
-        ├── p1_demanda.py  <- baselines y HistGradientBoostingRegressor (Poisson)
-        ├── p2_riesgo.py   <- baselines, LogisticRegression y HistGradientBoostingClassifier
-        ├── p3_clusters.py <- baseline por municipio, KMeans y Agglomerative (Ward)
-        └── train.py       <- punto de entrada: python -m mibici.modeling.train
+        ├── comun.py       <- ejecución de una corrida: búsqueda anidada, artefactos, firma y costo
+        ├── p1_demanda.py  <- recetas de P1: naive, promedio, hgb
+        ├── p2_riesgo.py   <- recetas de P2: persistencia, dummy, logistica, hgb
+        ├── p3_clusters.py <- recetas de P3: municipio, kmeans, ward
+        ├── train.py       <- entrada train
+        ├── registro.py    <- entrada register: Model Registry con aliases champion/challenger
+        └── predict.py     <- entrada predict: usa models:/<nombre>@champion
 ```
 
 ## Instalación
 
-Requiere Python 3.13 y `make`.
+Requiere Python 3.13, `make` y [`uv`](https://docs.astral.sh/uv/) (lo usa `mlflow run` para crear el
+entorno de `python_env.yaml`).
 
 ```bash
 git clone https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16.git
 cd TC5061-Proyecto-Equipo16
 python3.13 -m venv .venv          # Windows: py -3.13 -m venv .venv
 source .venv/bin/activate         # Windows: .venv\Scripts\activate
-make requirements                 # pip install -r requirements.txt (incluye el paquete mibici en modo editable)
+make requirements                 # pip install -r requirements.txt (incluye mlflow y el paquete mibici)
 cp .env.example .env              # Windows: copy .env.example .env
 ```
 
+El entorno activado solo se usa para lanzar `mlflow run` y el servidor; cada corrida se ejecuta en el
+entorno que `mlflow run --env-manager uv` crea a partir de `python_env.yaml` (mismas versiones fijas).
 `.env` solo contiene la URI de MLflow y nunca se sube a Git.
 
-## Ejecución en tres comandos
+## Reproducir con el MLflow Project
+
+Todas las corridas se lanzan con `mlflow run` desde la raíz del repositorio, nunca desde un notebook.
+El `MLproject` declara el entorno y cuatro entradas; sus parámetros vacíos se resuelven con
+[`mibici/config.py`](mibici/config.py), así que no repite rutas, fechas, semillas ni hiperparámetros.
+
+| Entrada | Qué hace | Parámetros |
+|---|---|---|
+| `ingest` | Descarga los 24 meses y la nomenclatura, genera Parquet y el manifiesto de datos | — |
+| `train` | Entrena **un** modelo de una pregunta (o una búsqueda con nested runs) y lo registra | `question`, `model`, `stage`, `search` e hiperparámetros |
+| `register` | Registra el modelo elegido y le asigna el alias `champion` | `question`, `run_id` (vacío: propone el mejor en validación) |
+| `predict` | Carga `models:/<nombre>@champion` y predice el conjunto de prueba | `question` |
+
+### 1. Servidor de tracking (en otra terminal)
+
+El Model Registry requiere un almacenamiento respaldado por base de datos, así que el servidor usa SQLite:
 
 ```bash
-make data      # 1. descarga los 24 meses y la nomenclatura, genera Parquet y manifiesto (~770 MB de CSV)
-make mlflow    # 2. en otra terminal: servidor de MLflow en http://127.0.0.1:5000
-make train     # 3. entrena los 10 modelos (P1, P2 y P3) y registra los runs en mibici-equipo16
+make mlflow    # mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port 5000
 ```
 
-- `make data` no vuelve a descargar ni a procesar lo que ya existe. Con los mismos CSV, el manifiesto
-  generado es idéntico al versionado.
-- `make mlflow` guarda los runs en `mlflow.db` y los artefactos en `./mlruns/` (ambos fuera de Git).
-  Abre <http://127.0.0.1:5000> y elige el experimento `mibici-equipo16`.
-- Para entrenar una sola pregunta: `make train PREGUNTA=P1` (o `P2`, `P3`; por defecto `todas`), o bien
-  `python -m mibici.modeling.train --pregunta P1`.
+`mlflow.db` (corridas y registry) y `./mlruns/` (artefactos) quedan fuera de Git. Abre
+<http://127.0.0.1:5000> y elige el experimento `mibici-equipo16`.
+
+### 2. Apuntar los comandos al servidor
+
+```bash
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5000   # Windows (PowerShell): $env:MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+```
+
+Los atajos de `make` ya lo hacen. Siempre se pasa `--experiment-name mibici-equipo16`: si una corrida se
+abre en otro experimento, el código se detiene con un error.
+
+### 3. Ingesta, baselines y candidatos
+
+```bash
+mlflow run . -e ingest --env-manager uv --experiment-name mibici-equipo16
+
+# Baselines de referencia (sin -P model se entrena el baseline de la pregunta)
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p1
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p2
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3
+
+# Un candidato con hiperparámetros explícitos
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=hgb -P learning_rate=0.05 -P max_leaf_nodes=63
+
+# Búsqueda de hiperparámetros como nested runs (rejilla en config.REJILLAS)
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=hgb -P search=true
+
+# Model Registry y uso del modelo en producción
+mlflow run . -e register --env-manager uv --experiment-name mibici-equipo16 -P question=p1 -P run_id=<run_id>
+mlflow run . -e predict  --env-manager uv --experiment-name mibici-equipo16 -P question=p1
+```
+
+Atajos equivalentes: `make data`, `make baselines`, `make train QUESTION=p1 MODEL=hgb`,
+`make register QUESTION=p1` y `make predict QUESTION=p1`. Si `uv` no está disponible, se puede usar el
+entorno activado con `ENV_MANAGER=local` (o `--env-manager local`).
+
+Modelos disponibles por pregunta (los baselines no aceptan hiperparámetros):
+
+| Pregunta | Baselines | Candidatos (hiperparámetros) | Búsqueda (`search=true`) |
+|---|---|---|---|
+| `p1` | `naive` (referencia), `promedio` | `hgb` (`learning_rate`, `max_leaf_nodes`, `max_iter`) | `hgb` |
+| `p2` | `persistencia` (referencia), `dummy` | `logistica` (`C`), `hgb` (`learning_rate`, `class_weight`, `max_iter`, `max_leaf_nodes`) | `hgb`, `logistica` |
+| `p3` | `municipio` (referencia) | `kmeans` (`k`), `ward` (`k`, solo comparación: no tiene `predict`) | `kmeans` |
+
+### Modelo en producción de cada pregunta
+
+Comandos para reproducir el modelo elegido desde un clon limpio (después de `ingest` y del baseline):
+
+| Pregunta | Modelo registrado | Corrida que lo produce | Registro |
+|---|---|---|---|
+| P1 | `mibici-equipo16-p1-demanda@champion` | *pendiente (PR de LH3)* | `-e register -P question=p1 -P run_id=<run_id>` |
+| P2 | `mibici-equipo16-p2-riesgo@champion` | *pendiente (PR de HH2)* | `-e register -P question=p2 -P run_id=<run_id>` |
+| P3 | `mibici-equipo16-p3-grupos@champion` | *pendiente (PR de DH4)* | `-e register -P question=p3 -P run_id=<run_id>` |
 
 ### macOS: puerto 5000 ocupado por AirPlay
 
-En macOS el puerto 5000 lo usa AirPlay Receiver (el navegador recibe un 403). Usa otro puerto en **ambos**
-comandos:
+En macOS el puerto 5000 lo usa AirPlay Receiver (el navegador recibe un 403). Usa otro puerto en el
+servidor y en los comandos:
 
 ```bash
 make mlflow MLFLOW_PORT=5001
-make train MLFLOW_PORT=5001
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5001   # o: make train MLFLOW_PORT=5001 ...
 ```
 
-Cuando `MLFLOW_PORT` se pasa en la línea de comandos, `make train` apunta a `http://127.0.0.1:<puerto>`.
-Si prefieres no escribirlo cada vez, descomenta `MLFLOW_TRACKING_URI=http://127.0.0.1:5001` en `.env`
-y levanta el servidor con `make mlflow MLFLOW_PORT=5001`.
+## Qué registra cada corrida
 
-## Qué registra cada run
+Cada corrida se abre con `mibici.tracking.iniciar_run()` (bajo `mlflow run` reanuda la corrida que crea
+MLflow) y registra:
 
-Todos los runs se abren con `mibici.tracking.iniciar_run()`, que fija el experimento `mibici-equipo16` y
-registra:
+- **Tags para filtrar y comparar:** `question` (p1/p2/p3), `model_family` (naive, linear, boosting,
+  clustering…), `stage_of_work` (`baseline`, `search`, `candidate`), además de las obligatorias `equipo`,
+  `pregunta`, `git_commit` (con sufijo `-sucio` si había cambios sin commit) y `version_datos`.
+- **Parámetros:** fechas de inicio y de corte, `version_datos`, `semilla` y los hiperparámetros reales.
+- **Métricas** con prefijo de conjunto (`train_`, `val_`, `test_`): las mismas de la entrega anterior
+  (P1: MAE, RMSE, desviación Poisson; P2: F1 macro, recall por clase, AP y balanced accuracy; P3: silueta,
+  Davies-Bouldin, Calinski-Harabasz, ARI), más:
+  - **costo:** `train_duracion_s` y `test_latencia_ms_por_1000`;
+  - **estabilidad:** desviación estándar mensual de la métrica principal en prueba (P1 y P2) o ARI entre
+    semillas (P3);
+  - **mejora contra el baseline de referencia:** `test_mejora_<métrica>_pct` y la tag `baseline_run_id`.
+- **Artefactos en subcarpetas:**
 
-- **Tags:** `equipo`, `pregunta` (P1/P2/P3) y `git_commit` (con sufijo `-sucio` si había cambios sin commit).
-- **Parámetros comunes:** fechas de inicio, cortes de validación y prueba, fecha de fin, `version_datos` y
-  `semilla` (16, desde `config.py`), más los hiperparámetros reales de cada modelo.
-- **Métricas** con prefijo de conjunto (`train_`, `val_`, `test_`), exigido por `registrar_metricas()`.
-- **Artefactos:** gráficas (real contra predicho, matriz de confusión, mapa y perfiles de clusters) y
-  tablas de métricas o búsqueda de hiperparámetros.
+| Carpeta | Contenido |
+|---|---|
+| `data/` | `manifiesto_datos.json` (versión de los datos) y el conjunto de entrenamiento con `mlflow.log_input` (solo variables agregadas por estación) |
+| `config/` | `config_efectiva.json` (valores usados de `config.py` y del `mlflow run`), `MLproject`, `python_env.yaml`, `requirements.txt` y `config.py` |
+| `plots/` | Real contra predicho (P1), matrices de confusión (P2), mapa y perfiles de grupos (P3) |
+| `metrics/` | `metricas.json` y la tabla de la búsqueda (`busqueda.csv`) |
+| `model/` | Modelo con firma (`signature`) y ejemplo de entrada; también como LoggedModel de MLflow 3 |
 
-| Pregunta | Runs | Métrica principal |
-|---|---|---|
-| P1 | `p1-naive-estacional`, `p1-promedio-estacion-dia`, `p1-hgb-poisson` | MAE |
-| P2 | `p2-dummy`, `p2-persistencia`, `p2-logistic-regression`, `p2-hgb` | F1 macro |
-| P3 | `p3-municipio`, `p3-kmeans`, `p3-agglomerative-ward` | Silueta |
+Las búsquedas (`search=true`) crean una corrida padre y una hija por combinación. Las hijas solo registran
+métricas de entrenamiento y validación; la padre registra la mejor combinación (elegida en validación), su
+evaluación en prueba, sus artefactos y su modelo. La partición temporal es la misma de la entrega anterior,
+así que toda corrida es comparable con su baseline.
 
-Los hiperparámetros se eligen solo con validación y la prueba se evalúa una vez con el modelo elegido.
-En P3, `k` se elige con la silueta del periodo de entrenamiento; validación y prueba solo miden la
-estabilidad de los grupos en periodos posteriores.
+## Esquema del Model Registry: aliases
+
+Usamos **aliases** y no etapas (*stages*). Las etapas `Staging`/`Production` están obsoletas desde
+MLflow 2.9 y la documentación recomienda aliases y tags. Además:
+
+- `champion` marca la versión en producción y `challenger` conserva la versión que reemplazó: comparar o
+  revertir es solo reasignar un alias, sin volver a registrar nada.
+- El código que consume el modelo carga siempre `models:/<nombre>@champion` (ver `predict.py`) y no cambia
+  cuando se promueve otra versión.
+- Cada versión guarda su linaje en tags (`experimento`, `run_id`, `git_commit`, `version_datos`, métrica
+  de validación) y una descripción; cada modelo registrado tiene la descripción de su pregunta.
+
+| Pregunta | Modelo registrado |
+|---|---|
+| P1 | `mibici-equipo16-p1-demanda` |
+| P2 | `mibici-equipo16-p2-riesgo` |
+| P3 | `mibici-equipo16-p3-grupos` |
+
+Para verificar que el modelo en producción carga por nombre y alias:
+
+```python
+import mlflow
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+modelo = mlflow.pyfunc.load_model("models:/mibici-equipo16-p1-demanda@champion")
+```
+
+Los modelos de scikit-learn se guardan con el formato seguro `skops`; solo se declaran como confiables los
+tipos de scikit-learn, numpy y del paquete `mibici`.
 
 ## Pruebas y estilo
 
@@ -137,8 +242,10 @@ make lint      # ruff format --check y ruff check
 make test      # pytest con datos sintéticos; no descarga nada ni usa data/
 ```
 
-Las pruebas de modelado usan un MLflow temporal (SQLite en un directorio temporal), así que no tocan el
-experimento real.
+Las pruebas usan un MLflow temporal (SQLite en un directorio temporal) y datos sintéticos, así que no tocan
+el experimento real. Cubren el `MLproject` (entradas, parámetros y defaults vacíos), la reanudación de la
+corrida de `mlflow run`, los nested runs, los artefactos por subcarpeta, la firma del modelo, la mejora
+contra el baseline, el registro con aliases y la carga por `@champion`.
 
 ## Reproducibilidad y buenas prácticas del equipo
 
@@ -178,10 +285,7 @@ Seguimos [GitHub Flow](https://docs.github.com/es/get-started/using-github/githu
 ### Protección de `main`
 
 `main` está protegida con el ruleset `protect_main`: no se permite push directo (todo cambio entra por
-Pull Request), ni borrar la rama ni hacer force push. El acuerdo del equipo es integrar solo con una
-aprobación de otro integrante; a la fecha de esta revisión (2026-10-18) el ruleset todavía no exige
-aprobaciones (`required_approving_review_count = 0`), por lo que el acuerdo depende de la disciplina del
-equipo hasta que CH1 lo ajuste.
+Pull Request con **una aprobación** de otro integrante), ni borrar la rama ni hacer force push.
 
 ### Convención de ramas
 
