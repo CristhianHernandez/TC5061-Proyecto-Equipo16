@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 
 from loguru import logger
@@ -10,6 +11,9 @@ import typer
 from mibici.config import (
     CABECERAS_DESCARGA,
     ESTACIONES_PARQUET,
+    FECHA_FIN,
+    FECHA_INICIO,
+    FUENTE_DATOS,
     MANIFIESTO_DATOS,
     RAW_DATA_DIR,
     URL_NOMENCLATURA,
@@ -53,7 +57,7 @@ def descargar_archivo(url: str, ruta: Path):
 
 
 def leer_csv(ruta: Path):
-    # Algunos archivos de MiBici utilizan otra codificación.
+    """Lee un CSV de MiBici probando UTF-8 y, si falla, latin-1 (varía entre meses)."""
     try:
         df = pd.read_csv(ruta, encoding="utf-8")
     except UnicodeDecodeError:
@@ -241,9 +245,9 @@ def generar_manifiesto():
         )
 
     manifiesto = {
-        "fuente": "https://mibici.net/es/datos-abiertos/",
-        "fecha_inicio": "2024-10-01",
-        "fecha_fin": "2026-09-30",
+        "fuente": FUENTE_DATOS,
+        "fecha_inicio": FECHA_INICIO,
+        "fecha_fin": FECHA_FIN,
         "archivos": archivos,
     }
 
@@ -299,9 +303,38 @@ def ejecutar_ingesta():
     logger.info("Ingesta terminada.")
 
 
+def registrar_ingesta():
+    """Bajo `mlflow run` documenta la ingesta: manifiesto en data/ y versión de los datos.
+
+    `mlflow run` crea una corrida para la entrada `ingest`; se reanuda para que el experimento
+    conserve qué versión de los datos se generó, sin registrar los datos mismos.
+    """
+    run_id = os.environ.pop("MLFLOW_RUN_ID", None)
+    if run_id is None:
+        return
+    import mlflow
+
+    from mibici.tracking import version_datos
+
+    with mlflow.start_run(run_id=run_id):
+        mlflow.set_tags({"mlflow.runName": "ingesta", "uso": "ingesta"})
+        mlflow.log_params(
+            {
+                "fuente": FUENTE_DATOS,
+                "fecha_inicio": FECHA_INICIO,
+                "fecha_fin": FECHA_FIN,
+                "meses": len(URLS_VIAJES),
+                "version_datos": version_datos(MANIFIESTO_DATOS),
+            }
+        )
+        mlflow.log_artifact(str(MANIFIESTO_DATOS), "data")
+
+
 @app.command()
 def main():
+    """Entrada `ingest` del MLflow Project: descarga, normaliza y versiona los datos."""
     ejecutar_ingesta()
+    registrar_ingesta()
 
 
 if __name__ == "__main__":

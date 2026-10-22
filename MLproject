@@ -1,0 +1,44 @@
+name: mibici-equipo16
+
+# Entorno con las mismas versiones fijas de requirements.txt (ver python_env.yaml).
+# Se recomienda --env-manager uv; --env-manager local usa el entorno ya activado.
+python_env: python_env.yaml
+
+# Los parámetros vacíos se resuelven con mibici/config.py: este archivo no repite rutas,
+# fechas, semillas ni hiperparámetros. Ejecutar siempre con --experiment-name mibici-equipo16.
+entry_points:
+  ingest:
+    command: "python -m mibici.dataset"
+
+  train:
+    parameters:
+      question: {type: string, default: p1}
+      model: {type: string, default: ""}
+      stage: {type: string, default: ""}
+      search: {type: string, default: "false"}
+      learning_rate: {type: string, default: ""}
+      max_leaf_nodes: {type: string, default: ""}
+      max_iter: {type: string, default: ""}
+      n_estimators: {type: string, default: ""}
+      max_depth: {type: string, default: ""}
+      C: {type: string, default: ""}
+      class_weight: {type: string, default: ""}
+      k: {type: string, default: ""}
+      n_components: {type: string, default: ""}
+    command: >-
+      python -m mibici.modeling.train
+      --question {question} --model {model} --stage {stage} --search {search}
+      --learning-rate {learning_rate} --max-leaf-nodes {max_leaf_nodes} --max-iter {max_iter}
+      --n-estimators {n_estimators} --max-depth {max_depth} --C {C}
+      --class-weight {class_weight} --k {k} --n-components {n_components}
+
+  register:
+    parameters:
+      question: {type: string, default: p1}
+      run_id: {type: string, default: ""}
+    command: "python -m mibici.modeling.registro --question {question} --run-id {run_id}"
+
+  predict:
+    parameters:
+      question: {type: string, default: p1}
+    command: "python -m mibici.modeling.predict --question {question}"

@@ -2,18 +2,24 @@
 
 Todo run del proyecto se abre con `iniciar_run`, que garantiza:
 - experimento `mibici-equipo16` y nombre de run descriptivo;
-- tags obligatorias: equipo, pregunta (P1/P2/P3) y commit de Git;
+- tags obligatorias: equipo, pregunta (P1/P2/P3) y commit de Git, más las de filtrado
+  `question`, `model_family`, `stage_of_work` y `version_datos`;
 - parámetros de reproducibilidad: rango de fechas, versión de los datos y semilla;
 - ningún parámetro con nombre de dato personal y métricas con prefijo del conjunto.
+
+Cuando el código corre con `mlflow run`, MLflow crea el run antes de ejecutarlo y pasa su
+identificador en `MLFLOW_RUN_ID`; `iniciar_run` reanuda ese run en lugar de crear otro.
 """
 
 from contextlib import contextmanager
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 
 from loguru import logger
 import mlflow
+from mlflow import MlflowClient
 
 from mibici.config import (
     EQUIPO,
@@ -30,6 +36,7 @@ from mibici.config import (
 
 PREGUNTAS = ("P1", "P2", "P3")
 PREFIJOS_METRICAS = ("train_", "val_", "test_")
+ETAPAS_TRABAJO = ("baseline", "search", "candidate", "analysis")
 # Fragmentos que no pueden aparecer en nombres de parámetros (datos personales del usuario)
 TERMINOS_PERSONALES = ("usuario", "genero", "nacimiento", "edad")
 
@@ -78,33 +85,94 @@ def registrar_metricas(metricas: dict[str, float]) -> None:
     mlflow.log_metrics(metricas)
 
 
+def _etiquetas(pregunta: str, etiquetas: dict | None) -> dict:
+    """Combina las tags obligatorias del equipo con las de filtrado de la corrida."""
+    etiquetas = dict(etiquetas or {})
+    etapa = etiquetas.get("stage_of_work")
+    if etapa is not None and etapa not in ETAPAS_TRABAJO:
+        raise ValueError(f"stage_of_work inválido: {etapa!r}; usa uno de {ETAPAS_TRABAJO}")
+    return {
+        "equipo": EQUIPO,
+        "pregunta": pregunta,
+        "question": pregunta.lower(),
+        "git_commit": obtener_commit(),
+        "version_datos": version_datos(MANIFIESTO_DATOS),
+        **etiquetas,
+    }
+
+
+def _abrir_run(nombre: str):
+    """Reanuda el run creado por `mlflow run` o abre uno nuevo en el experimento del equipo.
+
+    `mlflow run` deja el identificador en MLFLOW_RUN_ID. Se retira de las variables de entorno
+    después de reanudar: si se quedara, cualquier run anidado reutilizaría el run padre.
+    """
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    run_id = os.environ.pop("MLFLOW_RUN_ID", None)
+    if run_id is None:
+        mlflow.set_experiment(EXPERIMENTO_MLFLOW)
+        return mlflow.start_run(run_name=nombre)
+    experimento = MlflowClient().get_experiment(MlflowClient().get_run(run_id).info.experiment_id)
+    if experimento.name != EXPERIMENTO_MLFLOW:
+        raise ValueError(
+            f"El run {run_id} pertenece al experimento {experimento.name!r}; ejecuta mlflow run "
+            f"con --experiment-name {EXPERIMENTO_MLFLOW}"
+        )
+    return mlflow.start_run(run_id=run_id)
+
+
 @contextmanager
-def iniciar_run(pregunta: str, nombre: str, params: dict | None = None):
-    """Abre un run de MLflow con las tags y parámetros obligatorios del equipo.
+def iniciar_run(
+    pregunta: str, nombre: str, params: dict | None = None, etiquetas: dict | None = None
+):
+    """Abre (o reanuda, bajo `mlflow run`) un run con las tags y parámetros obligatorios.
 
     Uso:
-        with iniciar_run("P1", "p1-naive-estacional", {"modelo": "naive"}) as run:
+        with iniciar_run("P1", "p1-naive", {"modelo": "naive"},
+                         {"stage_of_work": "baseline", "model_family": "naive"}) as run:
             registrar_metricas({"val_mae": 3.2})
     """
+    pregunta = pregunta.upper()
     if pregunta not in PREGUNTAS:
         raise ValueError(f"Pregunta inválida: {pregunta!r}; usa una de {PREGUNTAS}")
     params = params or {}
     validar_params(params)
+    tags = _etiquetas(pregunta, etiquetas)
 
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment(EXPERIMENTO_MLFLOW)
-    with mlflow.start_run(run_name=nombre) as run:
-        mlflow.set_tags({"equipo": EQUIPO, "pregunta": pregunta, "git_commit": obtener_commit()})
+    with _abrir_run(nombre) as run:
+        mlflow.set_tags({"mlflow.runName": nombre, **tags})
         mlflow.log_params(
             {
                 "fecha_inicio": FECHA_INICIO,
                 "inicio_validacion": INICIO_VALIDACION,
                 "inicio_prueba": INICIO_PRUEBA,
                 "fecha_fin": FECHA_FIN,
-                "version_datos": version_datos(MANIFIESTO_DATOS),
+                "version_datos": tags["version_datos"],
                 "semilla": SEMILLA,
                 **params,
             }
         )
         logger.info(f"Run {nombre!r} ({pregunta}) iniciado: {run.info.run_id}")
+        yield run
+
+
+@contextmanager
+def iniciar_run_anidado(nombre: str, params: dict | None = None, etiquetas: dict | None = None):
+    """Abre un run hijo del run activo (una combinación de una búsqueda de hiperparámetros).
+
+    Hereda las tags de equipo, pregunta, commit y versión de datos del run padre.
+    """
+    padre = mlflow.active_run()
+    if padre is None:
+        raise RuntimeError("Un run anidado necesita un run padre activo")
+    params = params or {}
+    validar_params(params)
+    heredadas = {
+        k: v
+        for k, v in MlflowClient().get_run(padre.info.run_id).data.tags.items()
+        if k in ("equipo", "pregunta", "question", "git_commit", "version_datos", "model_family")
+    }
+    with mlflow.start_run(run_name=nombre, nested=True) as run:
+        mlflow.set_tags({**heredadas, "stage_of_work": "search", **(etiquetas or {})})
+        mlflow.log_params(params)
         yield run

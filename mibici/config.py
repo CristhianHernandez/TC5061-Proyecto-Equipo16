@@ -117,3 +117,67 @@ RANGO_K_P3 = tuple(range(2, 9))
 N_SEMILLAS_P3 = 3
 CLASES_RIESGO = ("normal", "sin_anclajes", "sin_bicicletas")
 MINIMO_POISSON = 1e-6
+
+# Entrega 2: MLflow Project, experimentación y Model Registry.
+# Los parámetros vacíos del MLproject se resuelven con estos valores, así el MLproject no repite
+# fechas, rutas, semillas ni hiperparámetros.
+FUENTE_DATOS = "https://mibici.net/es/datos-abiertos/"
+PREGUNTAS_PROYECTO = ("p1", "p2", "p3")
+
+# Modelo de referencia (baseline) de cada pregunta: es el que corre `train` sin `model` y contra el
+# que cada candidata calcula su mejora.
+BASELINES = {"p1": "naive", "p2": "persistencia", "p3": "municipio"}
+
+# Métrica principal y dirección: se usa para elegir combinaciones en las búsquedas, para la mejora
+# contra el baseline y para proponer el modelo a registrar. Se elige siempre con validación.
+METRICA_PRINCIPAL = {"p1": "mae", "p2": "f1_macro", "p3": "silueta"}
+MINIMIZAR = {"p1": True, "p2": False, "p3": False}
+
+# Hiperparámetros por defecto de cada modelo (los usa `train` cuando no se pasan con -P)
+HIPERPARAMETROS = {
+    "p1": {
+        "hgb": {"learning_rate": 0.1, "max_leaf_nodes": 31, "max_iter": ITERACIONES_HGB},
+    },
+    "p2": {
+        "logistica": {"C": 1.0},
+        "hgb": {"learning_rate": 0.1, "class_weight": None, "max_iter": ITERACIONES_HGB},
+    },
+    "p3": {
+        "kmeans": {"k": 4},
+        "ward": {"k": 4},
+    },
+}
+
+# Rejillas de las búsquedas organizadas como nested runs (`-P search=true`)
+REJILLAS = {
+    "p1": {"hgb": REJILLA_P1},
+    "p2": {"hgb": REJILLA_P2, "logistica": REJILLA_LOGISTICA},
+    "p3": {"kmeans": {"k": list(RANGO_K_P3)}},
+}
+
+# Model Registry: un modelo por pregunta, con aliases (las etapas están obsoletas desde MLflow 2.9)
+MODELOS_REGISTRADOS = {
+    "p1": "mibici-equipo16-p1-demanda",
+    "p2": "mibici-equipo16-p2-riesgo",
+    "p3": "mibici-equipo16-p3-grupos",
+}
+ALIAS_PRODUCCION = "champion"
+ALIAS_RETADOR = "challenger"
+DESCRIPCIONES_MODELOS = {
+    "p1": (
+        "P1 · Regresión de la demanda diaria: número de viajes que inician en cada estación al día "
+        "siguiente (D+1). Usuario: operador de MiBici, para dimensionar flota y personal. "
+        "Métrica de decisión: MAE en viajes por estación y día."
+    ),
+    "p2": (
+        "P2 · Clasificación del riesgo operativo por estación y franja de 3 horas: sin_bicicletas, "
+        "sin_anclajes o normal. La etiqueta es un proxy (flujo neto contra alfa por capacidad), "
+        "no inventario observado. Usuario: equipo de rebalanceo. Métrica de decisión: F1 macro, "
+        "con atención al recall de las clases de riesgo."
+    ),
+    "p3": (
+        "P3 · Agrupación de estaciones por patrón horario de uso (perfiles de salidas y llegadas, "
+        "volumen, balance y duración). Usuario: planeación urbana. Métrica de decisión: silueta, "
+        "con estabilidad medida por ARI."
+    ),
+}

@@ -62,21 +62,41 @@ mlflow:
 	mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port $(MLFLOW_PORT)
 
 
-PREGUNTA ?= todas
-ifeq ($(origin MLFLOW_PORT),command line)
-train: export MLFLOW_TRACKING_URI = http://127.0.0.1:$(MLFLOW_PORT)
-endif
+# Todas las corridas se lanzan con el MLflow Project (MLproject) en el experimento del equipo.
+# ENV_MANAGER=uv crea el entorno de python_env.yaml; ENV_MANAGER=local usa el entorno activo.
+ENV_MANAGER ?= uv
+EXPERIMENTO ?= mibici-equipo16
+export MLFLOW_TRACKING_URI ?= http://127.0.0.1:$(MLFLOW_PORT)
+MLFLOW_RUN = mlflow run . --env-manager $(ENV_MANAGER) --experiment-name $(EXPERIMENTO)
+QUESTION ?= p1
+MODEL ?=
 
-## Entrenar modelos y registrar experimentos DH4
-.PHONY: train
-train:
-	$(PYTHON_INTERPRETER) -m mibici.modeling.train --pregunta $(PREGUNTA)
-
-
-## Make dataset
+## Ingesta de datos con el MLflow Project (entrada ingest)
 .PHONY: data
 data:
-	$(PYTHON_INTERPRETER) -m mibici.dataset
+	$(MLFLOW_RUN) -e ingest
+
+## Entrenar un modelo: make train QUESTION=p1 MODEL=hgb (sin MODEL entrena el baseline)
+.PHONY: train
+train:
+	$(MLFLOW_RUN) -e train -P question=$(QUESTION) -P model=$(MODEL)
+
+## Entrenar los tres baselines de referencia (P1, P2 y P3)
+.PHONY: baselines
+baselines:
+	$(MLFLOW_RUN) -e train -P question=p1
+	$(MLFLOW_RUN) -e train -P question=p2
+	$(MLFLOW_RUN) -e train -P question=p3
+
+## Registrar y promover a producción el mejor modelo: make register QUESTION=p1
+.PHONY: register
+register:
+	$(MLFLOW_RUN) -e register -P question=$(QUESTION)
+
+## Predecir con el modelo en producción (alias champion): make predict QUESTION=p1
+.PHONY: predict
+predict:
+	$(MLFLOW_RUN) -e predict -P question=$(QUESTION)
 
 
 #################################################################################
