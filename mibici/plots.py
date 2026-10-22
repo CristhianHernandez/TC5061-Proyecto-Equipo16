@@ -31,6 +31,54 @@ def figura_demanda(conjuntos, predicciones):
     return figura
 
 
+def figura_residuales(conjuntos, predicciones):
+    """Dibuja residuales contra predicción en validación y prueba para P1."""
+    figura, ejes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
+    for eje, nombre in zip(ejes, ("val", "test"), strict=True):
+        real = conjuntos[nombre]["demanda"].to_numpy()
+        prediccion = np.asarray(predicciones[nombre])
+        eje.scatter(prediccion, real - prediccion, s=3, alpha=0.2, rasterized=True)
+        eje.axhline(0, color="black", linestyle="--", linewidth=1)
+        eje.set(
+            xlabel="Demanda predicha",
+            ylabel="Residual (real - predicción)",
+            title=f"P1: residuales en {nombre}",
+        )
+    figura.tight_layout()
+    return figura
+
+
+def figura_error_estacion(conjuntos, predicciones, cantidad=20):
+    """Muestra las estaciones con mayor MAE en el conjunto de prueba de P1."""
+    prueba = conjuntos["test"]
+    errores = (
+        prueba[["estacion_id"]]
+        .assign(error_absoluto=np.abs(prueba["demanda"].to_numpy() - predicciones["test"]))
+        .groupby("estacion_id")["error_absoluto"]
+        .mean()
+        .nlargest(cantidad)
+        .sort_values()
+    )
+    figura, eje = plt.subplots(figsize=(8, 6))
+    eje.barh(errores.index.astype(str), errores.to_numpy())
+    eje.set(
+        xlabel="MAE (viajes por día)",
+        ylabel="Estación",
+        title=f"P1: {len(errores)} estaciones con mayor error en prueba",
+    )
+    figura.tight_layout()
+    return figura
+
+
+def figuras_demanda(conjuntos, predicciones):
+    """Construye las tres evidencias gráficas requeridas para una corrida de P1."""
+    return {
+        "real_vs_predicho": figura_demanda(conjuntos, predicciones),
+        "residuales": figura_residuales(conjuntos, predicciones),
+        "error_por_estacion": figura_error_estacion(conjuntos, predicciones),
+    }
+
+
 def figura_confusion(real, prediccion, conjunto):
     """Muestra matriz P2 normalizada por clase real, anotada con conteos y proporciones."""
     conteos = confusion_matrix(real, prediccion, labels=CLASES_RIESGO)

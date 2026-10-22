@@ -38,6 +38,7 @@ def sinteticos():
                 "demanda_lag_1": 1 + estacion * 2,
                 "demanda_lag_7": np.nan if i == 0 else 2 + estacion * 2,
                 "demanda_media_7": 2 + estacion * 2,
+                "demanda_media_28": 2 + estacion * 2,
             }
             for periodo in fechas
             for i, fecha in enumerate(periodo)

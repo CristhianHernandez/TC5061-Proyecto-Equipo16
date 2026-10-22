@@ -138,8 +138,19 @@ mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
 mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
   -P question=p1 -P model=hgb -P search=true
 
+# Candidatas de P1 (la primera reproduce la mejor combinación de la búsqueda)
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=hgb -P stage=candidate -P features=v1 \
+  -P learning_rate=0.05 -P max_leaf_nodes=63 -P max_iter=100
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=rf -P n_estimators=300 -P max_depth=none
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=poisson -P alpha=1.0 -P max_iter=1000
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p1 -P model=hgb -P features=v2
+
 # Model Registry y uso del modelo en producción
-mlflow run . -e register --env-manager uv --experiment-name mibici-equipo16 -P question=p1 -P run_id=<run_id>
+mlflow run . -e register --env-manager uv --experiment-name mibici-equipo16 -P question=p1
 mlflow run . -e predict  --env-manager uv --experiment-name mibici-equipo16 -P question=p1
 ```
 
@@ -151,7 +162,7 @@ Modelos disponibles por pregunta (los baselines no aceptan hiperparámetros):
 
 | Pregunta | Baselines | Candidatos (hiperparámetros) | Búsqueda (`search=true`) |
 |---|---|---|---|
-| `p1` | `naive` (referencia), `promedio` | `hgb` (`learning_rate`, `max_leaf_nodes`, `max_iter`) | `hgb` |
+| `p1` | `naive` (referencia), `promedio` | `hgb` (`features`, `learning_rate`, `max_leaf_nodes`, `max_iter`), `rf` (`n_estimators`, `max_depth`), `poisson` (`alpha`, `max_iter`) | `hgb` (8 hijas) |
 | `p2` | `persistencia` (referencia), `dummy` | `logistica` (`C`), `hgb` (`learning_rate`, `class_weight`, `max_iter`, `max_leaf_nodes`) | `hgb`, `logistica` |
 | `p3` | `municipio` (referencia) | `kmeans` (`k`), `ward` (`k`, solo comparación: no tiene `predict`) | `kmeans` |
 
@@ -161,9 +172,15 @@ Comandos para reproducir el modelo elegido desde un clon limpio (después de `in
 
 | Pregunta | Modelo registrado | Corrida que lo produce | Registro |
 |---|---|---|---|
-| P1 | `mibici-equipo16-p1-demanda@champion` | *pendiente (PR de LH3)* | `-e register -P question=p1 -P run_id=<run_id>` |
+| P1 | `mibici-equipo16-p1-demanda@champion` | HGB Poisson `features=v1`, `learning_rate=0.05`, `max_leaf_nodes=63`, `max_iter=100` | `-e register -P question=p1` |
 | P2 | `mibici-equipo16-p2-riesgo@champion` | *pendiente (PR de HH2)* | `-e register -P question=p2 -P run_id=<run_id>` |
 | P3 | `mibici-equipo16-p3-grupos@champion` | *pendiente (PR de DH4)* | `-e register -P question=p3 -P run_id=<run_id>` |
+
+La selección automática de P1 considera sólo candidatas que mejoran al naive en prueba. Entre las
+que difieren menos de 2 % del menor `val_mae`, elige primero menor desviación mensual del MAE y
+después menor tiempo de entrenamiento y latencia. En la corrida local de referencia, RF obtuvo
+`val_mae=6.082826` y HGB `6.136672` (diferencia de 0.89 %); HGB fue más estable
+(`0.741989` frente a `0.751491`) y más barato (`1.4 s` frente a `275.8 s` de entrenamiento).
 
 ### macOS: puerto 5000 ocupado por AirPlay
 
@@ -197,7 +214,7 @@ MLflow) y registra:
 |---|---|
 | `data/` | `manifiesto_datos.json` (versión de los datos) y el conjunto de entrenamiento con `mlflow.log_input` (solo variables agregadas por estación) |
 | `config/` | `config_efectiva.json` (valores usados de `config.py` y del `mlflow run`), `MLproject`, `python_env.yaml`, `requirements.txt` y `config.py` |
-| `plots/` | Real contra predicho (P1), matrices de confusión (P2), mapa y perfiles de grupos (P3) |
+| `plots/` | Real contra predicho, residuales y error por estación (P1); matrices de confusión (P2); mapa y perfiles de grupos (P3) |
 | `metrics/` | `metricas.json` y la tabla de la búsqueda (`busqueda.csv`) |
 | `model/` | Modelo con firma (`signature`) y ejemplo de entrada; también como LoggedModel de MLflow 3 |
 

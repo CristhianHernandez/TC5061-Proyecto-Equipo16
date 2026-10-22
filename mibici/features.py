@@ -354,6 +354,34 @@ def agregar_media_movil_7(
     return df
 
 
+def agregar_media_movil_28(
+    demanda: pd.DataFrame,
+) -> pd.DataFrame:
+    """Calcula la demanda media de los 28 días anteriores por estación.
+
+    Excluye el día actual y exige 28 observaciones diarias completas. Así la
+    característica puede usarse para predecir D+1 sin incorporar información futura.
+    """
+    df = demanda.copy()
+    df["fecha"] = pd.to_datetime(df["fecha"]).dt.normalize()
+
+    if df.duplicated(["estacion_id", "fecha"]).any():
+        raise ValueError("Existen combinaciones estación-fecha duplicadas")
+
+    df = df.sort_values(["estacion_id", "fecha"]).reset_index(drop=True)
+    historial = df.set_index("fecha")
+    df["demanda_media_28"] = (
+        historial.groupby("estacion_id")["demanda"]
+        .transform(
+            lambda serie: (
+                serie.shift(1, freq="D").rolling("28D", min_periods=28).mean().reindex(serie.index)
+            )
+        )
+        .to_numpy()
+    )
+    return df
+
+
 def preparar_datos_p1(
     directorio_viajes: Path,
     estaciones: pd.DataFrame,
@@ -381,6 +409,7 @@ def preparar_datos_p1(
     datos = agregar_lag_demanda(datos)
     datos = agregar_lag_7(datos)
     datos = agregar_media_movil_7(datos)
+    datos = agregar_media_movil_28(datos)
 
     datos = filtrar_por_primera_actividad(
         datos,

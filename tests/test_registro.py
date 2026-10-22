@@ -1,11 +1,68 @@
 """Model Registry: registro con descripción y linaje, aliases champion/challenger y carga."""
 
+from types import SimpleNamespace
+
 import mlflow
 from mlflow import MlflowClient
 import pytest
+from typer.testing import CliRunner
 
 from mibici.config import ALIAS_PRODUCCION, ALIAS_RETADOR, MODELOS_REGISTRADOS
 from mibici.modeling import comun, predict, registro
+
+
+def test_p1_desempata_por_estabilidad_y_costo_sin_elegir_modelo_peor_que_naive(monkeypatch):
+    def corrida(nombre, val, test, estabilidad, duracion, etapa="candidate"):
+        return SimpleNamespace(
+            info=SimpleNamespace(run_id=nombre),
+            data=SimpleNamespace(
+                metrics={
+                    "val_mae": val,
+                    "test_mae": test,
+                    "test_mae_std_mensual": estabilidad,
+                    "train_duracion_s": duracion,
+                    "test_latencia_ms_por_1000": duracion,
+                },
+                tags={"stage_of_work": etapa},
+            ),
+        )
+
+    bosque = corrida("rf", 6.08, 5.86, 0.75, 275)
+    hgb = corrida("hgb", 6.14, 5.79, 0.74, 1.4)
+    busqueda = corrida("search", 6.14, 5.79, 0.74, 1.4, "search")
+    poisson = corrida("poisson", 5.9, 15.6, 0.9, 2)
+    cliente = SimpleNamespace(
+        get_experiment_by_name=lambda _: SimpleNamespace(experiment_id="1"),
+        search_runs=lambda *_args, **_kwargs: [poisson, bosque, busqueda, hgb],
+    )
+    monkeypatch.setattr(registro, "MlflowClient", lambda: cliente)
+    monkeypatch.setattr(registro, "metrica_baseline", lambda _: ("baseline", 7.35))
+    assert registro.mejor_corrida("p1").info.run_id == "hgb"
+
+    otro = corrida("otro", 6.12, 5.8, 0.74, 10)
+    cliente.search_runs = lambda *_args, **_kwargs: [bosque, otro, hgb]
+    assert registro.mejor_corrida("p1").info.run_id == "hgb"
+
+
+def test_cli_register_normaliza_comillas_vacias_de_mlflow_en_windows(monkeypatch):
+    llamadas = []
+
+    def promover_falso(question, run_id):
+        llamadas.append((question, run_id))
+        return {
+            "nombre": "mibici-equipo16-p1-demanda",
+            "version": "1",
+            "run_id": "corrida",
+            "uri": "models:/mibici-equipo16-p1-demanda@champion",
+            "challenger": None,
+        }
+
+    monkeypatch.setattr(registro, "promover", promover_falso)
+    resultado = CliRunner().invoke(
+        registro.app, ["--question", "p1", "--run-id", '""']
+    )
+    assert resultado.exit_code == 0, resultado.output
+    assert llamadas == [("p1", None)]
 
 
 @pytest.fixture(scope="module")

@@ -109,7 +109,11 @@ except ModuleNotFoundError:
     pass
 
 # DH4: rejillas pequeñas y protocolo reproducible de entrenamiento.
-REJILLA_P1 = {"learning_rate": [0.05, 0.1], "max_leaf_nodes": [31, 63]}
+REJILLA_P1 = {
+    "learning_rate": [0.05, 0.1],
+    "max_leaf_nodes": [31, 63],
+    "max_iter": [100, 200],
+}
 REJILLA_LOGISTICA = {"C": [0.1, 1.0]}
 REJILLA_P2 = {"class_weight": [None, "balanced"], "learning_rate": [0.1]}
 ITERACIONES_HGB = 300
@@ -117,6 +121,7 @@ RANGO_K_P3 = tuple(range(2, 9))
 N_SEMILLAS_P3 = 3
 CLASES_RIESGO = ("normal", "sin_anclajes", "sin_bicicletas")
 MINIMO_POISSON = 1e-6
+UMBRAL_EMPATE_P1 = 0.02  # diferencia relativa de MAE de validación para comparar estabilidad y costo
 
 # Entrega 2: MLflow Project, experimentación y Model Registry.
 # Los parámetros vacíos del MLproject se resuelven con estos valores, así el MLproject no repite
@@ -136,7 +141,14 @@ MINIMIZAR = {"p1": True, "p2": False, "p3": False}
 # Hiperparámetros por defecto de cada modelo (los usa `train` cuando no se pasan con -P)
 HIPERPARAMETROS = {
     "p1": {
-        "hgb": {"learning_rate": 0.1, "max_leaf_nodes": 31, "max_iter": ITERACIONES_HGB},
+        "hgb": {
+            "features": "v1",
+            "learning_rate": 0.1,
+            "max_leaf_nodes": 31,
+            "max_iter": ITERACIONES_HGB,
+        },
+        "rf": {"n_estimators": 300, "max_depth": None},
+        "poisson": {"alpha": 1.0, "max_iter": 1000},
     },
     "p2": {
         "logistica": {"C": 1.0},

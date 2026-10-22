@@ -11,11 +11,13 @@ from mibici.config import PROJ_ROOT
 from mibici.modeling import train
 
 HIPERPARAMETROS_TRAIN = (
+    "features",
     "learning_rate",
     "max_leaf_nodes",
     "max_iter",
     "n_estimators",
     "max_depth",
+    "alpha",
     "C",
     "class_weight",
     "k",
@@ -74,11 +76,56 @@ def test_cli_train_convierte_y_omite_vacios(monkeypatch):
         train, "ejecutar", lambda *args, **kwargs: llamadas.append((args, kwargs)) or "run"
     )
     argumentos = ["--question", "p2", "--model", "hgb", "--class-weight", "none"]
-    argumentos += ["--learning-rate", "0.05", "--max-leaf-nodes", "63", "--C", ""]
+    argumentos += [
+        "--features",
+        "v2",
+        "--learning-rate",
+        "0.05",
+        "--max-leaf-nodes",
+        "63",
+        "--C",
+        "",
+    ]
     resultado = CliRunner().invoke(train.app, argumentos)
     assert resultado.exit_code == 0, resultado.output
     (args, kwargs) = llamadas[0]
     assert args[:3] == ("p2", "hgb", None)
-    assert args[3] == {"class_weight": None, "learning_rate": 0.05, "max_leaf_nodes": 63}
+    assert args[3] == {
+        "class_weight": None,
+        "features": "v2",
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 63,
+    }
     assert kwargs == {"search": False}
     assert CliRunner().invoke(train.app, ["--search", "tal vez"]).exit_code != 0
+
+
+def test_cli_train_normaliza_comillas_vacias_de_mlflow_en_windows(monkeypatch):
+    llamadas = []
+    monkeypatch.setattr(
+        train, "ejecutar", lambda *args, **kwargs: llamadas.append((args, kwargs)) or "run"
+    )
+    resultado = CliRunner().invoke(
+        train.app,
+        [
+            "--question",
+            "p1",
+            "--model",
+            "hgb",
+            "--stage",
+            '""',
+            "--search",
+            "true",
+            "--features",
+            "v1",
+            "--learning-rate",
+            '""',
+            "--max-leaf-nodes",
+            '""',
+        ],
+    )
+    assert resultado.exit_code == 0, resultado.output
+    (args, kwargs) = llamadas[0]
+    assert args[:3] == ("p1", "hgb", None)
+    assert args[3] == {"features": "v1"}
+    assert kwargs == {"search": True}
