@@ -6,8 +6,12 @@ la entrega anterior, para que la comparación contra el baseline sea válida.
 """
 
 import numpy as np
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import mean_absolute_error, mean_poisson_deviance, root_mean_squared_error
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from mibici.config import FECHA_FIN, FECHA_INICIO, MINIMO_POISSON, SEMILLA, VIAJES_DIR
 from mibici.dataset import cargar_estaciones
@@ -19,7 +23,7 @@ from mibici.modeling.comun import (
     metricas_con_prefijo,
     parametros_conjuntos,
 )
-from mibici.plots import figura_demanda
+from mibici.plots import figuras_demanda
 
 PREGUNTA = "p1"
 OBJETIVO = "demanda"
@@ -36,6 +40,7 @@ VARIABLES = [
     "latitud",
     "longitud",
 ]
+VARIABLES_V2 = [*VARIABLES, "demanda_media_28"]
 
 
 def construir_conjuntos(datos, estaciones):
@@ -140,7 +145,7 @@ def entrenar_naive(conjuntos, hiperparametros):
     return Resultado(
         metricas,
         params,
-        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        figuras_demanda(conjuntos, predicciones),
         entrenamiento=entrenamiento[["estacion_id", "dia_semana", "demanda_lag_7", OBJETIVO]],
         objetivo=OBJETIVO,
     )
@@ -162,7 +167,7 @@ def entrenar_promedio(conjuntos, hiperparametros):
     return Resultado(
         metricas,
         params,
-        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        figuras_demanda(conjuntos, predicciones),
         entrenamiento=entrenamiento[["estacion_id", "dia_semana", OBJETIVO]],
         objetivo=OBJETIVO,
     )
@@ -171,13 +176,19 @@ def entrenar_promedio(conjuntos, hiperparametros):
 def entrenar_hgb(conjuntos, hiperparametros):
     """Candidato de P1: gradient boosting con pérdida Poisson, adecuada para conteos."""
     entrenamiento = conjuntos["train"]
+    hiperparametros = dict(hiperparametros)
+    variante = hiperparametros.pop("features", "v1")
+    if variante not in ("v1", "v2"):
+        raise ValueError("features debe ser 'v1' o 'v2'")
+    variables = VARIABLES_V2 if variante == "v2" else VARIABLES
     modelo = HistGradientBoostingRegressor(
         loss="poisson", random_state=SEMILLA, early_stopping=False, **hiperparametros
-    ).fit(entrenamiento[VARIABLES], entrenamiento[OBJETIVO])
-    metricas, predicciones = evaluar(conjuntos, lambda f: modelo.predict(f[VARIABLES]))
-    params = parametros_conjuntos("hgb", VARIABLES, conjuntos)
+    ).fit(entrenamiento[variables], entrenamiento[OBJETIVO])
+    metricas, predicciones = evaluar(conjuntos, lambda f: modelo.predict(f[variables]))
+    params = parametros_conjuntos("hgb", variables, conjuntos)
     params.update(
         {
+            "features": variante,
             **hiperparametros,
             "loss": "poisson",
             "early_stopping": False,
@@ -188,19 +199,65 @@ def entrenar_hgb(conjuntos, hiperparametros):
     return Resultado(
         metricas,
         params,
-        {"real_vs_predicho": figura_demanda(conjuntos, predicciones)},
+        figuras_demanda(conjuntos, predicciones),
         modelo=modelo,
-        ejemplo=entrenamiento[VARIABLES].head(5),
-        entrenamiento=entrenamiento[VARIABLES + [OBJETIVO]],
+        ejemplo=entrenamiento[variables].head(5),
+        entrenamiento=entrenamiento[variables + [OBJETIVO]],
         objetivo=OBJETIVO,
-        x_prueba=conjuntos["test"][VARIABLES],
+        x_prueba=conjuntos["test"][variables],
     )
+
+
+def _resultado_candidato(conjuntos, modelo, nombre, variables, hiperparametros):
+    """Ajusta, evalúa y empaqueta un regresor servible de P1."""
+    entrenamiento = conjuntos["train"]
+    modelo.fit(entrenamiento[variables], entrenamiento[OBJETIVO])
+    metricas, predicciones = evaluar(conjuntos, lambda f: modelo.predict(f[variables]))
+    params = parametros_conjuntos(nombre, variables, conjuntos)
+    params.update({**hiperparametros, "clip_poisson": MINIMO_POISSON})
+    return Resultado(
+        metricas,
+        params,
+        figuras_demanda(conjuntos, predicciones),
+        modelo=modelo,
+        ejemplo=entrenamiento[variables].head(5),
+        entrenamiento=entrenamiento[variables + [OBJETIVO]],
+        objetivo=OBJETIVO,
+        x_prueba=conjuntos["test"][variables],
+    )
+
+
+def entrenar_rf(conjuntos, hiperparametros):
+    """Candidato de P1: bosque aleatorio con criterio Poisson para conteos."""
+    modelo = make_pipeline(
+        SimpleImputer(strategy="median"),
+        RandomForestRegressor(
+            criterion="poisson", random_state=SEMILLA, n_jobs=1, **hiperparametros
+        ),
+    )
+    resultado = _resultado_candidato(conjuntos, modelo, "rf", VARIABLES, hiperparametros)
+    resultado.params.update({"criterion": "poisson", "random_state": SEMILLA, "n_jobs": 1})
+    return resultado
+
+
+def entrenar_poisson(conjuntos, hiperparametros):
+    """Candidato lineal de P1: GLM Poisson con imputación y escalamiento."""
+    modelo = make_pipeline(
+        SimpleImputer(strategy="median"),
+        StandardScaler(),
+        PoissonRegressor(**hiperparametros),
+    )
+    return _resultado_candidato(conjuntos, modelo, "poisson", VARIABLES, hiperparametros)
 
 
 MODELOS = {
     "naive": Modelo("naive", entrenar_naive, baseline=True),
     "promedio": Modelo("naive", entrenar_promedio, baseline=True),
     "hgb": Modelo(
-        "boosting", entrenar_hgb, hiperparametros=("learning_rate", "max_leaf_nodes", "max_iter")
+        "boosting",
+        entrenar_hgb,
+        hiperparametros=("features", "learning_rate", "max_leaf_nodes", "max_iter"),
     ),
+    "rf": Modelo("tree_ensemble", entrenar_rf, hiperparametros=("n_estimators", "max_depth")),
+    "poisson": Modelo("linear", entrenar_poisson, hiperparametros=("alpha", "max_iter")),
 }

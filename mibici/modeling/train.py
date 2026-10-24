@@ -20,9 +20,15 @@ from mibici.modeling.comun import ejecutar
 app = typer.Typer()
 
 
+def limpiar(valor: str) -> str:
+    """Normaliza vacíos que MLflow puede pasar como comillas literales en Windows."""
+    texto = valor.strip()
+    return "" if texto in ('""', "''") else texto
+
+
 def convertir(valor: str):
     """Convierte el texto recibido por -P al tipo de Python: entero, flotante, None o texto."""
-    texto = valor.strip()
+    texto = limpiar(valor)
     if texto.lower() in ("none", "null"):
         return None
     for tipo in (int, float):
@@ -35,7 +41,7 @@ def convertir(valor: str):
 
 def hiperparametros_dados(**valores: str) -> dict:
     """Conserva solo los hiperparámetros que se pasaron (los vacíos se toman de config.py)."""
-    return {nombre: convertir(valor) for nombre, valor in valores.items() if valor.strip()}
+    return {nombre: convertir(valor) for nombre, valor in valores.items() if limpiar(valor)}
 
 
 @app.command()
@@ -44,25 +50,30 @@ def main(
     model: str = typer.Option("", help="Modelo; vacío entrena el baseline de la pregunta"),
     stage: str = typer.Option("", help="baseline, search, candidate o analysis; vacío lo deduce"),
     search: str = typer.Option("false", help="true para una búsqueda con nested runs"),
+    features: str = typer.Option("", help="Variante de variables: v1 o v2"),
     learning_rate: str = typer.Option(""),
     max_leaf_nodes: str = typer.Option(""),
     max_iter: str = typer.Option(""),
     n_estimators: str = typer.Option(""),
     max_depth: str = typer.Option(""),
+    alpha: str = typer.Option("", help="Regularización de la regresión Poisson"),
     c: str = typer.Option("", "--C", help="Regularización inversa (logística)"),
     class_weight: str = typer.Option(""),
     k: str = typer.Option("", help="Número de grupos (P3)"),
     n_components: str = typer.Option(""),
 ):
     """Entrena y registra un modelo de una pregunta como corrida del experimento del equipo."""
-    if search.strip().lower() not in ("true", "false"):
+    search = limpiar(search).lower()
+    if search not in ("true", "false"):
         raise typer.BadParameter("Usa true o false", param_hint="--search")
     hiperparametros = hiperparametros_dados(
+        features=features,
         learning_rate=learning_rate,
         max_leaf_nodes=max_leaf_nodes,
         max_iter=max_iter,
         n_estimators=n_estimators,
         max_depth=max_depth,
+        alpha=alpha,
         C=c,
         class_weight=class_weight,
         k=k,
@@ -72,10 +83,10 @@ def main(
     try:
         run_id = ejecutar(
             question,
-            model.strip() or None,
-            stage.strip() or None,
+            limpiar(model) or None,
+            limpiar(stage) or None,
             hiperparametros,
-            search=search.strip().lower() == "true",
+            search=search == "true",
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error

@@ -5,6 +5,7 @@ from mibici.features import (
     agregar_lag_7,
     agregar_lag_demanda,
     agregar_media_movil_7,
+    agregar_media_movil_28,
     demanda_diaria,
     filtrar_por_primera_actividad,
 )
@@ -270,6 +271,26 @@ def test_media_movil_varias_estaciones():
 
     assert estacion_2["demanda_media_7"].iloc[-1] == 10
     assert estacion_3["demanda_media_7"].iloc[-1] == 100
+
+
+def test_media_movil_28_excluye_dia_actual_y_futuro():
+    demanda = pd.DataFrame(
+        {
+            "estacion_id": [2] * 30,
+            "fecha": pd.date_range("2024-10-01", periods=30, freq="D"),
+            "demanda": list(range(1, 30)) + [9999],
+        }
+    )
+
+    resultado = agregar_media_movil_28(demanda)
+
+    assert resultado["demanda_media_28"].iloc[:28].isna().all()
+    assert resultado["demanda_media_28"].iloc[28] == 14.5
+    assert resultado["demanda_media_28"].iloc[29] == 15.5
+
+    alterada = demanda.copy()
+    alterada.loc[29, "demanda"] = -9999
+    assert agregar_media_movil_28(alterada)["demanda_media_28"].iloc[29] == 15.5
 
 
 def test_limpiar_viajes():

@@ -1,5 +1,6 @@
 """Contratos de entrenamiento y registro de P1, P2 y P3 con datos sintéticos y MLflow temporal."""
 
+import matplotlib.pyplot as plt
 import mlflow
 from mlflow import MlflowClient
 import numpy as np
@@ -23,6 +24,8 @@ CORRIDAS = (
     ("p1", "naive", {}),
     ("p1", "promedio", {}),
     ("p1", "hgb", {"max_iter": 20}),
+    ("p1", "rf", {"n_estimators": 10, "max_depth": 4}),
+    ("p1", "poisson", {"max_iter": 100}),
     ("p2", "persistencia", {}),
     ("p2", "dummy", {}),
     ("p2", "logistica", {}),
@@ -31,7 +34,15 @@ CORRIDAS = (
     ("p3", "kmeans", {"k": 3}),
     ("p3", "ward", {"k": 3}),
 )
-SERVIBLES = {("p1", "hgb"), ("p2", "dummy"), ("p2", "logistica"), ("p2", "hgb"), ("p3", "kmeans")}
+SERVIBLES = {
+    ("p1", "hgb"),
+    ("p1", "rf"),
+    ("p1", "poisson"),
+    ("p2", "dummy"),
+    ("p2", "logistica"),
+    ("p2", "hgb"),
+    ("p3", "kmeans"),
+}
 
 
 @pytest.fixture(scope="session")
@@ -98,6 +109,12 @@ def test_artefactos_organizados_en_subcarpetas(corridas):
         assert {"config/MLproject", "config/python_env.yaml", "config/requirements.txt"} <= rutas
         assert "metrics/metricas.json" in rutas
         assert any(r.startswith("plots/") and r.endswith(".png") for r in rutas)
+        if question == "p1" and run.data.tags["stage_of_work"] == "candidate":
+            assert {
+                "plots/real_vs_predicho.png",
+                "plots/residuales.png",
+                "plots/error_por_estacion.png",
+            } <= rutas
         entradas = run.inputs.dataset_inputs
         assert [i.dataset.name for i in entradas] == [f"{question}-entrenamiento"]
         assert [t.value for t in entradas[0].tags] == ["training"]
@@ -255,10 +272,22 @@ def test_metricas_poisson_recorta_cero():
     assert np.isfinite(metricas["desviacion_poisson"])
 
 
+def test_hgb_v2_usa_media_movil_28(conjuntos):
+    resultado = p1.entrenar_hgb(
+        conjuntos["p1"],
+        {"features": "v2", "learning_rate": 0.1, "max_leaf_nodes": 31, "max_iter": 20},
+    )
+    assert "demanda_media_28" in resultado.ejemplo.columns
+    assert resultado.params["features"] == "v2"
+    assert set(resultado.figuras) == {"real_vs_predicho", "residuales", "error_por_estacion"}
+
+
 def test_candidatos_se_ajustan_solo_con_train(conjuntos):
     """Cambiar val o test no cambia lo que aprende un modelo: se ajusta solo con train."""
     for question, model, hiperparametros in (
         ("p1", "hgb", {"learning_rate": 0.1, "max_leaf_nodes": 31, "max_iter": 20}),
+        ("p1", "rf", {"n_estimators": 10, "max_depth": 4}),
+        ("p1", "poisson", {"alpha": 1.0, "max_iter": 100}),
         ("p2", "logistica", {"C": 1.0}),
         ("p3", "kmeans", {"k": 3}),
     ):
@@ -278,6 +307,9 @@ def test_candidatos_se_ajustan_solo_con_train(conjuntos):
         for clave, valor in original.metricas.items():
             if clave.startswith("train_"):
                 assert nuevo.metricas[clave] == pytest.approx(valor)
+        for resultado in (original, nuevo):
+            for figura in resultado.figuras.values():
+                plt.close(figura)
 
 
 def test_p3_kmeans_es_pipeline_servible_y_escala_de_train(conjuntos):

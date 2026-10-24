@@ -31,14 +31,21 @@ from mibici.config import (
     MINIMIZAR,
     MLFLOW_TRACKING_URI,
     MODELOS_REGISTRADOS,
+    UMBRAL_EMPATE_P1,
 )
 from mibici.modeling.comun import es_mejor, metrica_baseline, modulo_pregunta
 
 app = typer.Typer()
 
 
+def limpiar_vacio(valor: str) -> str:
+    """Normaliza vacíos que MLflow puede pasar como comillas literales en Windows."""
+    texto = valor.strip()
+    return "" if texto in ('""', "''") else texto
+
+
 def mejor_corrida(question: str):
-    """Corrida candidata o de búsqueda con modelo servible y mejor métrica de validación."""
+    """Elige una corrida registrable según la regla de selección de cada pregunta."""
     cliente = MlflowClient()
     experimento = cliente.get_experiment_by_name(EXPERIMENTO_MLFLOW)
     if experimento is None:
@@ -55,6 +62,39 @@ def mejor_corrida(question: str):
     runs = [r for r in runs if metrica in r.data.metrics]
     if not runs:
         raise ValueError(f"No hay corridas registrables de {question} con {metrica}")
+    if question == "p1":
+        referencia = metrica_baseline(question)
+        if referencia is None:
+            raise ValueError("P1 requiere un baseline naive terminado antes del registro")
+        candidatas = [
+            run
+            for run in runs
+            if run.data.tags.get("stage_of_work") == "candidate"
+            and "test_mae" in run.data.metrics
+            and run.data.metrics["test_mae"] < referencia[1]
+        ]
+        if not candidatas:
+            raise ValueError("No hay candidatas P1 que superen al naive en prueba")
+        menor_mae = min(run.data.metrics[metrica] for run in candidatas)
+        empatadas = [
+            run
+            for run in candidatas
+            if (
+                (run.data.metrics[metrica] - menor_mae) / menor_mae
+                if menor_mae > 0
+                else 0.0 if run.data.metrics[metrica] == 0 else float("inf")
+            )
+            < UMBRAL_EMPATE_P1
+        ]
+        return min(
+            empatadas,
+            key=lambda run: (
+                run.data.metrics.get("test_mae_std_mensual", float("inf")),
+                run.data.metrics.get("train_duracion_s", float("inf")),
+                run.data.metrics.get("test_latencia_ms_por_1000", float("inf")),
+                run.data.metrics[metrica],
+            ),
+        )
     return runs[0]
 
 
@@ -173,7 +213,7 @@ def main(
     """Registra y promueve a producción el modelo elegido de una pregunta."""
     # `mlflow run` crea una corrida para este comando: se reanuda al final para documentarlo.
     propio = os.environ.pop("MLFLOW_RUN_ID", None)
-    resultado = promover(question, run_id.strip() or None)
+    resultado = promover(question, limpiar_vacio(run_id) or None)
     if propio is not None:
         with mlflow.start_run(run_id=propio):
             mlflow.set_tags(

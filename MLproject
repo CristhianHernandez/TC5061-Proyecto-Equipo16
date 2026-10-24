@@ -16,20 +16,22 @@ entry_points:
       model: {type: string, default: ""}
       stage: {type: string, default: ""}
       search: {type: string, default: "false"}
+      features: {type: string, default: ""}
       learning_rate: {type: string, default: ""}
       max_leaf_nodes: {type: string, default: ""}
       max_iter: {type: string, default: ""}
       n_estimators: {type: string, default: ""}
       max_depth: {type: string, default: ""}
+      alpha: {type: string, default: ""}
       C: {type: string, default: ""}
       class_weight: {type: string, default: ""}
       k: {type: string, default: ""}
       n_components: {type: string, default: ""}
     command: >-
       python -m mibici.modeling.train
-      --question {question} --model {model} --stage {stage} --search {search}
+      --question {question} --model {model} --stage {stage} --search {search} --features {features}
       --learning-rate {learning_rate} --max-leaf-nodes {max_leaf_nodes} --max-iter {max_iter}
-      --n-estimators {n_estimators} --max-depth {max_depth} --C {C}
+      --n-estimators {n_estimators} --max-depth {max_depth} --alpha {alpha} --C {C}
       --class-weight {class_weight} --k {k} --n-components {n_components}
 
   register:
