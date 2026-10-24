@@ -30,6 +30,7 @@ CORRIDAS = (
     ("p2", "dummy", {}),
     ("p2", "logistica", {}),
     ("p2", "hgb", {"max_iter": 20}),
+    ("p2", "random_forest", {"n_estimators": 10, "max_depth": 4}),
     ("p3", "municipio", {}),
     ("p3", "kmeans", {"k": 3}),
     ("p3", "ward", {"k": 3}),
@@ -41,6 +42,7 @@ SERVIBLES = {
     ("p2", "dummy"),
     ("p2", "logistica"),
     ("p2", "hgb"),
+    ("p2", "random_forest"),
     ("p3", "kmeans"),
 }
 
@@ -193,6 +195,65 @@ def test_busqueda_como_nested_runs(corridas, conjuntos):
     rutas = artefactos(padre_id)
     assert {"metrics/busqueda.csv", "model/MLmodel", "data/manifiesto_datos.json"} <= rutas
     assert "test_mae" in padre.data.metrics
+
+def test_busqueda_random_forest_p2(mlflow_sesion, conjuntos, monkeypatch):
+    """Verifica la búsqueda anidada de Random Forest para P2."""
+    rejilla = {
+        "n_estimators": [5],
+        "max_depth": [3, 5],
+        "class_weight": ["balanced"],
+    }
+
+    # Rejilla reducida: únicamente dos combinaciones.
+    monkeypatch.setitem(
+        comun.REJILLAS["p2"],
+        "random_forest",
+        rejilla,
+    )
+
+    padre_id = comun.ejecutar(
+        "p2",
+        "random_forest",
+        None,
+        {},
+        True,
+        conjuntos["p2"],
+    )
+
+    cliente = MlflowClient()
+    padre = cliente.get_run(padre_id)
+
+    hijos = cliente.search_runs(
+        [padre.info.experiment_id],
+        filter_string=f"tags.mlflow.parentRunId = '{padre_id}'",
+    )
+
+    # Deben existir exactamente dos corridas hijas.
+    assert len(hijos) == 2
+
+    # Las hijas no deben registrar métricas de prueba.
+    for hijo in hijos:
+        assert "val_f1_macro" in hijo.data.metrics
+        assert not any(
+            clave.startswith("test_")
+            for clave in hijo.data.metrics
+        )
+
+    # P2 debe seleccionar el F1 macro de validación más alto.
+    mejor_f1 = max(
+        hijo.data.metrics["val_f1_macro"]
+        for hijo in hijos
+    )
+
+    assert padre.data.metrics["val_f1_macro"] == pytest.approx(mejor_f1)
+
+    # La corrida padre debe registrar los parámetros seleccionados.
+    assert "mejor_max_depth" in padre.data.params
+    assert "mejor_n_estimators" in padre.data.params
+    assert "mejor_class_weight" in padre.data.params
+
+    # El modelo seleccionado debe registrar su evaluación final.
+    assert "test_f1_macro" in padre.data.metrics
 
 
 def test_busqueda_elige_sin_ver_prueba(mlflow_sesion, conjuntos):

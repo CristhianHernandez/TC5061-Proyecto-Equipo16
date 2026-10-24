@@ -8,7 +8,7 @@ balanced accuracy) son las mismas de la entrega anterior.
 import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -159,11 +159,14 @@ def evaluar(conjuntos, puntuar):
 
 
 def _puntuar_estimador(modelo, variables):
-    """Una sola inferencia probabilística por conjunto proporciona puntajes y clases."""
+    """Obtiene las predicciones y probabilidades de cada clase."""
 
     def puntuar(filas):
         puntuaciones = modelo.predict_proba(filas[variables])
-        return modelo.classes_[np.argmax(puntuaciones, axis=1)], puntuaciones, modelo.classes_
+        clases = modelo.classes_
+        predicciones = clases[np.argmax(puntuaciones, axis=1)]
+
+        return predicciones, puntuaciones, clases
 
     return puntuar
 
@@ -267,6 +270,36 @@ def entrenar_hgb(conjuntos, hiperparametros):
     extra = {**hiperparametros, "early_stopping": False, "random_state": SEMILLA}
     return _resultado(conjuntos, "hgb", modelo, VARIABLES_HGB, extra)
 
+def entrenar_random_forest(conjuntos, hiperparametros):
+    """Entrena Random Forest para clasificar el riesgo operativo P2."""
+    entrenamiento = conjuntos["train"]
+
+    modelo = make_pipeline(
+        SimpleImputer(strategy="median"),
+        RandomForestClassifier(
+            random_state=SEMILLA,
+            n_jobs=-1,
+            **hiperparametros,
+        ),
+    )
+
+    modelo.fit(
+        entrenamiento[VARIABLES],
+        entrenamiento[OBJETIVO],
+    )
+
+    extra = {
+        **hiperparametros,
+        "random_state": SEMILLA,
+    }
+
+    return _resultado(
+        conjuntos,
+        "random_forest",
+        modelo,
+        VARIABLES,
+        extra,
+    )
 
 MODELOS = {
     "persistencia": Modelo("naive", entrenar_persistencia, baseline=True),
@@ -276,5 +309,10 @@ MODELOS = {
         "boosting",
         entrenar_hgb,
         hiperparametros=("learning_rate", "class_weight", "max_iter", "max_leaf_nodes"),
+    ),
+    "random_forest": Modelo(
+        "ensemble",
+        entrenar_random_forest,
+        hiperparametros=("n_estimators", "max_depth", "class_weight"),
     ),
 }
