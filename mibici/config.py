@@ -116,6 +116,11 @@ REJILLA_P1 = {
 }
 REJILLA_LOGISTICA = {"C": [0.1, 1.0]}
 REJILLA_P2 = {"class_weight": [None, "balanced"], "learning_rate": [0.1]}
+REJILLA_RANDOM_FOREST = {
+    "n_estimators": [100, 200],
+    "max_depth": [10, 15],
+    "class_weight": [None, "balanced"],
+}
 ITERACIONES_HGB = 300
 RANGO_K_P3 = tuple(range(2, 9))
 N_SEMILLAS_P3 = 3
@@ -153,6 +158,7 @@ HIPERPARAMETROS = {
     "p2": {
         "logistica": {"C": 1.0},
         "hgb": {"learning_rate": 0.1, "class_weight": None, "max_iter": ITERACIONES_HGB},
+        "random_forest": {"n_estimators": 200,"max_depth": 15,"class_weight": "balanced",},
     },
     "p3": {
         "kmeans": {"k": 4},
@@ -163,7 +169,11 @@ HIPERPARAMETROS = {
 # Rejillas de las búsquedas organizadas como nested runs (`-P search=true`)
 REJILLAS = {
     "p1": {"hgb": REJILLA_P1},
-    "p2": {"hgb": REJILLA_P2, "logistica": REJILLA_LOGISTICA},
+    "p2": {
+        "hgb": REJILLA_P2,
+        "logistica": REJILLA_LOGISTICA,
+        "random_forest": REJILLA_RANDOM_FOREST,
+    },
     "p3": {"kmeans": {"k": list(RANGO_K_P3)}},
 }
 
