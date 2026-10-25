@@ -102,27 +102,43 @@ def test_busqueda_de_k_como_nested_runs(mlflow_sesion, conjuntos, monkeypatch):
     assert "plots/silueta.png" in {a.path for a in cliente.list_artifacts(padre_id, "plots")}
 
 
-def test_regla_p3_exige_estabilidad_y_candidata(monkeypatch):
-    def corrida(nombre, silueta, ari, etapa="candidate"):
+def test_regla_p3_exige_estabilidad_separacion_y_desempata_por_consistencia(monkeypatch):
+    def corrida(nombre, silueta, ari, etapa="candidate", train=0.1, periodo=0.5):
         return SimpleNamespace(
             info=SimpleNamespace(run_id=nombre),
             data=SimpleNamespace(
-                metrics={"val_silueta": silueta, "train_ari_semillas": ari},
+                metrics={
+                    "val_silueta": silueta,
+                    "train_ari_semillas": ari,
+                    "train_silueta": train,
+                    "val_ari_periodo": periodo,
+                    "train_duracion_s": 1.0,
+                },
                 tags={"stage_of_work": etapa},
             ),
         )
 
     # Ordenadas por silueta de validación, como las devuelve search_runs
     inestable = corrida("inestable", 0.30, 0.55)
+    sin_separacion = corrida("sin_separacion", 0.28, 0.95, train=-0.01)
     busqueda = corrida("busqueda", 0.25, 0.95, "search")
-    estable = corrida("estable", 0.20, 0.92)
+    estable = corrida("estable", 0.20, 0.92, periodo=0.69)
+    consistente = corrida("consistente", 0.198, 0.97, periodo=0.71)
+    lejana = corrida("lejana", 0.10, 0.99, periodo=0.99)
     cliente = SimpleNamespace(
         get_experiment_by_name=lambda _: SimpleNamespace(experiment_id="1"),
-        search_runs=lambda *_args, **_kwargs: [inestable, busqueda, estable],
+        search_runs=lambda *_args, **_kwargs: [
+            inestable,
+            sin_separacion,
+            busqueda,
+            estable,
+            consistente,
+            lejana,
+        ],
     )
     monkeypatch.setattr(registro, "MlflowClient", lambda: cliente)
-    assert registro.mejor_corrida("p3").info.run_id == "estable"
-    cliente.search_runs = lambda *_args, **_kwargs: [inestable]
+    assert registro.mejor_corrida("p3").info.run_id == "consistente"
+    cliente.search_runs = lambda *_args, **_kwargs: [inestable, sin_separacion]
     with pytest.raises(ValueError, match="ARI"):
         registro.mejor_corrida("p3")
 

@@ -171,6 +171,7 @@ HIPERPARAMETROS = {
 
 # Regla de selección de P3: los grupos del champion deben ser estables entre semillas
 UMBRAL_ARI_P3 = 0.8
+UMBRAL_EMPATE_P3 = 0.005  # diferencia absoluta de silueta de validación que se considera empate
 
 # Tablas comparativas de la entrada `compare` (fuera de Git, para el reporte)
 TABLAS_COMPARATIVAS = {q: REPORTS_DIR / f"tabla_comparativa_{q}.csv" for q in PREGUNTAS_PROYECTO}
