@@ -27,12 +27,14 @@ entry_points:
       class_weight: {type: string, default: ""}
       k: {type: string, default: ""}
       n_components: {type: string, default: ""}
+      covariance_type: {type: string, default: ""}
     command: >-
       python -m mibici.modeling.train
       --question {question} --model {model} --stage {stage} --search {search} --features {features}
       --learning-rate {learning_rate} --max-leaf-nodes {max_leaf_nodes} --max-iter {max_iter}
       --n-estimators {n_estimators} --max-depth {max_depth} --alpha {alpha} --C {C}
       --class-weight {class_weight} --k {k} --n-components {n_components}
+      --covariance-type {covariance_type}
 
   register:
     parameters:
@@ -44,3 +46,7 @@ entry_points:
     parameters:
       question: {type: string, default: p1}
     command: "python -m mibici.modeling.predict --question {question}"
+
+  # Tablas comparativas por pregunta (reports/tabla_comparativa_p*.csv) a partir del experimento
+  compare:
+    command: "python -m mibici.modeling.comparar"

@@ -31,6 +31,7 @@ from mibici.config import (
     MINIMIZAR,
     MLFLOW_TRACKING_URI,
     MODELOS_REGISTRADOS,
+    UMBRAL_ARI_P3,
     UMBRAL_EMPATE_P1,
 )
 from mibici.modeling.comun import es_mejor, metrica_baseline, modulo_pregunta
@@ -82,7 +83,9 @@ def mejor_corrida(question: str):
             if (
                 (run.data.metrics[metrica] - menor_mae) / menor_mae
                 if menor_mae > 0
-                else 0.0 if run.data.metrics[metrica] == 0 else float("inf")
+                else 0.0
+                if run.data.metrics[metrica] == 0
+                else float("inf")
             )
             < UMBRAL_EMPATE_P1
         ]
@@ -95,6 +98,18 @@ def mejor_corrida(question: str):
                 run.data.metrics[metrica],
             ),
         )
+    if question == "p3":
+        # Regla de P3: candidata servible (tiene predict) con grupos estables entre semillas y,
+        # entre ellas, la mayor silueta de validación (runs ya viene ordenado por ella).
+        estables = [
+            run
+            for run in runs
+            if run.data.tags.get("stage_of_work") == "candidate"
+            and run.data.metrics.get("train_ari_semillas", 0.0) >= UMBRAL_ARI_P3
+        ]
+        if not estables:
+            raise ValueError(f"No hay candidatas P3 con ARI entre semillas >= {UMBRAL_ARI_P3}")
+        return estables[0]
     return runs[0]
 
 

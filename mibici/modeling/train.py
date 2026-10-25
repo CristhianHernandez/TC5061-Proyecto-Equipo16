@@ -61,6 +61,7 @@ def main(
     class_weight: str = typer.Option(""),
     k: str = typer.Option("", help="Número de grupos (P3)"),
     n_components: str = typer.Option(""),
+    covariance_type: str = typer.Option("", help="Covarianza de GaussianMixture (P3)"),
 ):
     """Entrena y registra un modelo de una pregunta como corrida del experimento del equipo."""
     search = limpiar(search).lower()
@@ -78,6 +79,7 @@ def main(
         class_weight=class_weight,
         k=k,
         n_components=n_components,
+        covariance_type=covariance_type,
     )
     inicio = perf_counter()
     try:

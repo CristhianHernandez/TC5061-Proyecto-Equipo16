@@ -33,6 +33,7 @@ CORRIDAS = (
     ("p2", "random_forest", {"n_estimators": 10, "max_depth": 4}),
     ("p3", "municipio", {}),
     ("p3", "kmeans", {"k": 3}),
+    ("p3", "gmm", {"n_components": 3}),
     ("p3", "ward", {"k": 3}),
 )
 SERVIBLES = {
@@ -44,6 +45,7 @@ SERVIBLES = {
     ("p2", "hgb"),
     ("p2", "random_forest"),
     ("p3", "kmeans"),
+    ("p3", "gmm"),
 }
 
 

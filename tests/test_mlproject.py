@@ -22,6 +22,7 @@ HIPERPARAMETROS_TRAIN = (
     "class_weight",
     "k",
     "n_components",
+    "covariance_type",
 )
 
 
@@ -30,8 +31,9 @@ def proyecto():
     return load_project(str(PROJ_ROOT))
 
 
-def test_entradas_ingest_train_register_y_predict(proyecto):
-    assert {"ingest", "train", "register", "predict"} <= set(proyecto._entry_points)
+def test_entradas_ingest_train_register_predict_y_compare(proyecto):
+    assert {"ingest", "train", "register", "predict", "compare"} <= set(proyecto._entry_points)
+    assert "mibici.modeling.comparar" in proyecto.get_entry_point("compare").command
     assert "mibici.dataset" in proyecto.get_entry_point("ingest").command
     entrada = proyecto.get_entry_point("train")
     assert {"question", "model", "stage", "search", *HIPERPARAMETROS_TRAIN} <= set(

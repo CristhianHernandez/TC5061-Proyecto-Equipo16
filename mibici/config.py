@@ -126,7 +126,9 @@ RANGO_K_P3 = tuple(range(2, 9))
 N_SEMILLAS_P3 = 3
 CLASES_RIESGO = ("normal", "sin_anclajes", "sin_bicicletas")
 MINIMO_POISSON = 1e-6
-UMBRAL_EMPATE_P1 = 0.02  # diferencia relativa de MAE de validación para comparar estabilidad y costo
+UMBRAL_EMPATE_P1 = (
+    0.02  # diferencia relativa de MAE de validación para comparar estabilidad y costo
+)
 
 # Entrega 2: MLflow Project, experimentación y Model Registry.
 # Los parámetros vacíos del MLproject se resuelven con estos valores, así el MLproject no repite
@@ -161,10 +163,17 @@ HIPERPARAMETROS = {
         "random_forest": {"n_estimators": 200,"max_depth": 15,"class_weight": "balanced",},
     },
     "p3": {
-        "kmeans": {"k": 4},
+        "kmeans": {"k": 4, "features": "v1"},
+        "gmm": {"n_components": 4, "covariance_type": "diag"},
         "ward": {"k": 4},
     },
 }
+
+# Regla de selección de P3: los grupos del champion deben ser estables entre semillas
+UMBRAL_ARI_P3 = 0.8
+
+# Tablas comparativas de la entrada `compare` (fuera de Git, para el reporte)
+TABLAS_COMPARATIVAS = {q: REPORTS_DIR / f"tabla_comparativa_{q}.csv" for q in PREGUNTAS_PROYECTO}
 
 # Rejillas de las búsquedas organizadas como nested runs (`-P search=true`)
 REJILLAS = {
