@@ -270,7 +270,8 @@ def entrenar_hgb(conjuntos, hiperparametros):
     extra = {**hiperparametros, "early_stopping": False, "random_state": SEMILLA}
     return _resultado(conjuntos, "hgb", modelo, VARIABLES_HGB, extra)
 
-def entrenar_random_forest(conjuntos, hiperparametros):
+
+def entrenar_rf(conjuntos, hiperparametros):
     """Entrena Random Forest para clasificar el riesgo operativo P2."""
     entrenamiento = conjuntos["train"]
 
@@ -295,11 +296,12 @@ def entrenar_random_forest(conjuntos, hiperparametros):
 
     return _resultado(
         conjuntos,
-        "random_forest",
+        "rf",
         modelo,
         VARIABLES,
         extra,
     )
+
 
 MODELOS = {
     "persistencia": Modelo("naive", entrenar_persistencia, baseline=True),
@@ -310,9 +312,9 @@ MODELOS = {
         entrenar_hgb,
         hiperparametros=("learning_rate", "class_weight", "max_iter", "max_leaf_nodes"),
     ),
-    "random_forest": Modelo(
-        "ensemble",
-        entrenar_random_forest,
+    "rf": Modelo(
+        "tree_ensemble",
+        entrenar_rf,
         hiperparametros=("n_estimators", "max_depth", "class_weight"),
     ),
 }

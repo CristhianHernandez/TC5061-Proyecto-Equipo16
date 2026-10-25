@@ -160,7 +160,11 @@ HIPERPARAMETROS = {
     "p2": {
         "logistica": {"C": 1.0},
         "hgb": {"learning_rate": 0.1, "class_weight": None, "max_iter": ITERACIONES_HGB},
-        "random_forest": {"n_estimators": 200,"max_depth": 15,"class_weight": "balanced",},
+        "rf": {
+            "n_estimators": 200,
+            "max_depth": 15,
+            "class_weight": "balanced",
+        },
     },
     "p3": {
         "kmeans": {"k": 4, "features": "v1"},
@@ -182,7 +186,7 @@ REJILLAS = {
     "p2": {
         "hgb": REJILLA_P2,
         "logistica": REJILLA_LOGISTICA,
-        "random_forest": REJILLA_RANDOM_FOREST,
+        "rf": REJILLA_RANDOM_FOREST,
     },
     "p3": {"kmeans": {"k": list(RANGO_K_P3)}},
 }

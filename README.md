@@ -62,7 +62,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     └── modeling/
         ├── comun.py       <- ejecución de una corrida: búsqueda anidada, artefactos, firma y costo
         ├── p1_demanda.py  <- recetas de P1: naive, promedio, hgb
-        ├── p2_riesgo.py   <- recetas de P2: persistencia, dummy, logistica, hgb
+        ├── p2_riesgo.py   <- recetas de P2: persistencia, dummy, logistica, hgb, rf
         ├── p3_clusters.py <- recetas de P3: municipio, kmeans (v1/v2), gmm, ward
         ├── comparar.py    <- entrada compare: tablas comparativas por pregunta
         ├── train.py       <- entrada train
@@ -184,7 +184,7 @@ Modelos disponibles por pregunta (los baselines no aceptan hiperparámetros):
 | Pregunta | Baselines | Candidatos (hiperparámetros) | Búsqueda (`search=true`) |
 |---|---|---|---|
 | `p1` | `naive` (referencia), `promedio` | `hgb` (`features`, `learning_rate`, `max_leaf_nodes`, `max_iter`), `rf` (`n_estimators`, `max_depth`), `poisson` (`alpha`, `max_iter`) | `hgb` (8 hijas) |
-| `p2` | `persistencia` (referencia), `dummy` | `logistica` (`C`), `hgb` (`learning_rate`, `class_weight`, `max_iter`, `max_leaf_nodes`) | `hgb`, `logistica` |
+| `p2` | `persistencia` (referencia), `dummy` | `logistica` (`C`), `hgb` (`learning_rate`, `class_weight`, `max_iter`, `max_leaf_nodes`), `rf` (`n_estimators`, `max_depth`, `class_weight`) | `hgb`, `logistica`, `rf` |
 | `p3` | `municipio` (referencia) | `kmeans` (`k`, `features`), `gmm` (`n_components`, `covariance_type`), `ward` (`k`, solo comparación: no tiene `predict`) | `kmeans` (k de 2 a 8) |
 
 ### Modelo en producción de cada pregunta

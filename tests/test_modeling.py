@@ -30,7 +30,7 @@ CORRIDAS = (
     ("p2", "dummy", {}),
     ("p2", "logistica", {}),
     ("p2", "hgb", {"max_iter": 20}),
-    ("p2", "random_forest", {"n_estimators": 10, "max_depth": 4}),
+    ("p2", "rf", {"n_estimators": 10, "max_depth": 4}),
     ("p3", "municipio", {}),
     ("p3", "kmeans", {"k": 3}),
     ("p3", "gmm", {"n_components": 3}),
@@ -43,7 +43,7 @@ SERVIBLES = {
     ("p2", "dummy"),
     ("p2", "logistica"),
     ("p2", "hgb"),
-    ("p2", "random_forest"),
+    ("p2", "rf"),
     ("p3", "kmeans"),
     ("p3", "gmm"),
 }
@@ -198,8 +198,8 @@ def test_busqueda_como_nested_runs(corridas, conjuntos):
     assert {"metrics/busqueda.csv", "model/MLmodel", "data/manifiesto_datos.json"} <= rutas
     assert "test_mae" in padre.data.metrics
 
-def test_busqueda_random_forest_p2(mlflow_sesion, conjuntos, monkeypatch):
-    """Verifica la búsqueda anidada de Random Forest para P2."""
+def test_busqueda_rf_p2(mlflow_sesion, conjuntos, monkeypatch):
+    """Verifica la búsqueda anidada del Random Forest (rf) de P2."""
     rejilla = {
         "n_estimators": [5],
         "max_depth": [3, 5],
@@ -209,13 +209,13 @@ def test_busqueda_random_forest_p2(mlflow_sesion, conjuntos, monkeypatch):
     # Rejilla reducida: únicamente dos combinaciones.
     monkeypatch.setitem(
         comun.REJILLAS["p2"],
-        "random_forest",
+        "rf",
         rejilla,
     )
 
     padre_id = comun.ejecutar(
         "p2",
-        "random_forest",
+        "rf",
         None,
         {},
         True,
@@ -229,6 +229,8 @@ def test_busqueda_random_forest_p2(mlflow_sesion, conjuntos, monkeypatch):
         [padre.info.experiment_id],
         filter_string=f"tags.mlflow.parentRunId = '{padre_id}'",
     )
+
+    assert padre.data.tags["model_family"] == "tree_ensemble"
 
     # Deben existir exactamente dos corridas hijas.
     assert len(hijos) == 2
