@@ -98,6 +98,11 @@ register:
 predict:
 	$(MLFLOW_RUN) -e predict -P question=$(QUESTION)
 
+## Tablas comparativas de P1, P2 y P3 en reports/ (fuera de Git)
+.PHONY: compare
+compare:
+	$(MLFLOW_RUN) -e compare
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

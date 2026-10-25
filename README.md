@@ -63,7 +63,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
         ├── comun.py       <- ejecución de una corrida: búsqueda anidada, artefactos, firma y costo
         ├── p1_demanda.py  <- recetas de P1: naive, promedio, hgb
         ├── p2_riesgo.py   <- recetas de P2: persistencia, dummy, logistica, hgb
-        ├── p3_clusters.py <- recetas de P3: municipio, kmeans, ward
+        ├── p3_clusters.py <- recetas de P3: municipio, kmeans (v1/v2), gmm, ward
+        ├── comparar.py    <- entrada compare: tablas comparativas por pregunta
         ├── train.py       <- entrada train
         ├── registro.py    <- entrada register: Model Registry con aliases champion/challenger
         └── predict.py     <- entrada predict: usa models:/<nombre>@champion
@@ -99,6 +100,7 @@ El `MLproject` declara el entorno y cuatro entradas; sus parámetros vacíos se 
 | `train` | Entrena **un** modelo de una pregunta (o una búsqueda con nested runs) y lo registra | `question`, `model`, `stage`, `search` e hiperparámetros |
 | `register` | Registra el modelo elegido y le asigna el alias `champion` | `question`, `run_id` (vacío: propone el mejor en validación) |
 | `predict` | Carga `models:/<nombre>@champion` y predice el conjunto de prueba | `question` |
+| `compare` | Escribe `reports/tabla_comparativa_p1.csv`, `p2` y `p3` a partir del experimento (fuera de Git) | — |
 
 ### 1. Servidor de tracking (en otra terminal)
 
@@ -149,13 +151,32 @@ mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
 mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
   -P question=p1 -P model=hgb -P features=v2
 
+# P3: búsqueda de k (2 a 8; cada hija mide además el ARI entre 3 semillas) y candidatas
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p3 -P model=kmeans -P search=true
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=kmeans -P k=2
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=kmeans -P k=3
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=kmeans -P k=2 -P features=v2
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=kmeans -P k=3 -P features=v2
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p3 -P model=gmm -P n_components=2 -P covariance_type=diag
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p3 -P model=gmm -P n_components=3 -P covariance_type=diag
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p3 -P model=gmm -P n_components=3 -P covariance_type=spherical
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=ward -P k=2
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 -P question=p3 -P model=ward -P k=3
+
 # Model Registry y uso del modelo en producción
 mlflow run . -e register --env-manager uv --experiment-name mibici-equipo16 -P question=p1
 mlflow run . -e predict  --env-manager uv --experiment-name mibici-equipo16 -P question=p1
+
+# Tablas comparativas de las tres preguntas (reports/tabla_comparativa_p*.csv)
+mlflow run . -e compare --env-manager uv --experiment-name mibici-equipo16
 ```
 
 Atajos equivalentes: `make data`, `make baselines`, `make train QUESTION=p1 MODEL=hgb`,
-`make register QUESTION=p1` y `make predict QUESTION=p1`. Si `uv` no está disponible, se puede usar el
+`make register QUESTION=p1`, `make predict QUESTION=p1` y `make compare`. Si `uv` no está disponible, se puede usar el
 entorno activado con `ENV_MANAGER=local` (o `--env-manager local`).
 
 Modelos disponibles por pregunta (los baselines no aceptan hiperparámetros):
@@ -164,7 +185,7 @@ Modelos disponibles por pregunta (los baselines no aceptan hiperparámetros):
 |---|---|---|---|
 | `p1` | `naive` (referencia), `promedio` | `hgb` (`features`, `learning_rate`, `max_leaf_nodes`, `max_iter`), `rf` (`n_estimators`, `max_depth`), `poisson` (`alpha`, `max_iter`) | `hgb` (8 hijas) |
 | `p2` | `persistencia` (referencia), `dummy` | `logistica` (`C`), `hgb` (`learning_rate`, `class_weight`, `max_iter`, `max_leaf_nodes`) | `hgb`, `logistica` |
-| `p3` | `municipio` (referencia) | `kmeans` (`k`), `ward` (`k`, solo comparación: no tiene `predict`) | `kmeans` |
+| `p3` | `municipio` (referencia) | `kmeans` (`k`, `features`), `gmm` (`n_components`, `covariance_type`), `ward` (`k`, solo comparación: no tiene `predict`) | `kmeans` (k de 2 a 8) |
 
 ### Modelo en producción de cada pregunta
 
@@ -174,13 +195,29 @@ Comandos para reproducir el modelo elegido desde un clon limpio (después de `in
 |---|---|---|---|
 | P1 | `mibici-equipo16-p1-demanda@champion` | HGB Poisson `features=v1`, `learning_rate=0.05`, `max_leaf_nodes=63`, `max_iter=100` | `-e register -P question=p1` |
 | P2 | `mibici-equipo16-p2-riesgo@champion` | *pendiente (PR de HH2)* | `-e register -P question=p2 -P run_id=<run_id>` |
-| P3 | `mibici-equipo16-p3-grupos@champion` | *pendiente (PR de DH4)* | `-e register -P question=p3 -P run_id=<run_id>` |
+| P3 | `mibici-equipo16-p3-grupos@champion` | KMeans `features=v2`, `k=2` | `-e register -P question=p3` |
 
 La selección automática de P1 considera sólo candidatas que mejoran al naive en prueba. Entre las
 que difieren menos de 2 % del menor `val_mae`, elige primero menor desviación mensual del MAE y
 después menor tiempo de entrenamiento y latencia. En la corrida local de referencia, RF obtuvo
 `val_mae=6.082826` y HGB `6.136672` (diferencia de 0.89 %); HGB fue más estable
 (`0.741989` frente a `0.751491`) y más barato (`1.4 s` frente a `275.8 s` de entrenamiento).
+
+### P3: variables, métricas y regla de selección
+
+- **Volúmenes por día.** Los totales de cada perfil se expresan en viajes por día del periodo: train cubre
+  18 meses y validación y prueba 3, así que los conteos brutos desplazarían los perfiles posteriores al
+  asignarlos con `predict`.
+- **Variantes de variables.** `features=v1` usa los 96 perfiles horarios, log-volúmenes, balance relativo y
+  duración media; `features=v2` quita los log-volúmenes para agrupar solo por la forma del uso.
+- **Métricas comparables.** Silueta (principal), Davies-Bouldin y Calinski-Harabasz se calculan siempre en
+  el espacio v1 con la escala de train, aunque el modelo agrupe con v2. `val_silueta` y `test_silueta`
+  aplican las etiquetas de train a los perfiles del periodo; `val_ari_periodo` y `test_ari_periodo`
+  comparan esas etiquetas con las que asigna el modelo, y `train_ari_semillas` mide la estabilidad entre 3
+  inicializaciones.
+- **Regla de selección (`register` sin `run_id`).** Candidata con `predict` (KMeans o GMM; Ward no puede
+  asignar estaciones nuevas), `train_ari_semillas >= 0.8` y silueta de train positiva; gana la mayor
+  `val_silueta` y un empate (menos de 0.005) se decide por `val_ari_periodo` y luego por costo.
 
 ### macOS: puerto 5000 ocupado por AirPlay
 
@@ -214,8 +251,8 @@ MLflow) y registra:
 |---|---|
 | `data/` | `manifiesto_datos.json` (versión de los datos) y el conjunto de entrenamiento con `mlflow.log_input` (solo variables agregadas por estación) |
 | `config/` | `config_efectiva.json` (valores usados de `config.py` y del `mlflow run`), `MLproject`, `python_env.yaml`, `requirements.txt` y `config.py` |
-| `plots/` | Real contra predicho, residuales y error por estación (P1); matrices de confusión (P2); mapa y perfiles de grupos (P3) |
-| `metrics/` | `metricas.json` y la tabla de la búsqueda (`busqueda.csv`) |
+| `plots/` | Real contra predicho, residuales y error por estación (P1); matrices de confusión (P2); mapa, perfiles y silueta por grupo (P3) |
+| `metrics/` | `metricas.json` y la tabla de la búsqueda (`busqueda.csv`); la corrida de `compare` guarda las tablas comparativas |
 | `model/` | Modelo con firma (`signature`) y ejemplo de entrada; también como LoggedModel de MLflow 3 |
 
 Las búsquedas (`search=true`) crean una corrida padre y una hija por combinación. Las hijas solo registran
