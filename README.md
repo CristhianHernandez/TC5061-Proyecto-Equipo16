@@ -151,6 +151,20 @@ mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
 mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
   -P question=p1 -P model=hgb -P features=v2
 
+# P2: búsquedas como nested runs (rejillas en config.REJILLAS) y candidatas elegidas en validación
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=hgb -P search=true
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=logistica -P search=true
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=rf -P search=true
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=hgb -P learning_rate=0.1 -P class_weight=none -P max_iter=300
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=logistica -P C=0.1
+mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
+  -P question=p2 -P model=rf -P n_estimators=200 -P max_depth=15 -P class_weight=none
+
 # P3: búsqueda de k (2 a 8; cada hija mide además el ARI entre 3 semillas) y candidatas
 mlflow run . -e train --env-manager uv --experiment-name mibici-equipo16 \
   -P question=p3 -P model=kmeans -P search=true
@@ -194,7 +208,7 @@ Comandos para reproducir el modelo elegido desde un clon limpio (después de `in
 | Pregunta | Modelo registrado | Corrida que lo produce | Registro |
 |---|---|---|---|
 | P1 | `mibici-equipo16-p1-demanda@champion` | HGB Poisson `features=v1`, `learning_rate=0.05`, `max_leaf_nodes=63`, `max_iter=100` | `-e register -P question=p1` |
-| P2 | `mibici-equipo16-p2-riesgo@champion` | *pendiente (PR de HH2)* | `-e register -P question=p2 -P run_id=<run_id>` |
+| P2 | `mibici-equipo16-p2-riesgo@champion` | HGB `learning_rate=0.1`, `class_weight=none`, `max_iter=300` | `-e register -P question=p2` |
 | P3 | `mibici-equipo16-p3-grupos@champion` | KMeans `features=v2`, `k=2` | `-e register -P question=p3` |
 
 La selección automática de P1 considera sólo candidatas que mejoran al naive en prueba. Entre las
@@ -202,6 +216,12 @@ que difieren menos de 2 % del menor `val_mae`, elige primero menor desviación m
 después menor tiempo de entrenamiento y latencia. En la corrida local de referencia, RF obtuvo
 `val_mae=6.082826` y HGB `6.136672` (diferencia de 0.89 %); HGB fue más estable
 (`0.741989` frente a `0.751491`) y más barato (`1.4 s` frente a `275.8 s` de entrenamiento).
+
+En P2, `register` sin `run_id` elige la candidata con mayor `val_f1_macro`: HGB (`0.530071`) frente a
+Random Forest (`≈0.498`) y regresión logística (`0.359038`). Ninguna supera al baseline de persistencia
+(`test_f1_macro=0.567355` frente a `0.535265` de HGB), así que la versión registrada queda con la tag
+`supera_baseline=no` y se documenta como candidata experimental; el análisis completo está en
+[`reports/p2_resultados.md`](reports/p2_resultados.md).
 
 ### P3: variables, métricas y regla de selección
 
