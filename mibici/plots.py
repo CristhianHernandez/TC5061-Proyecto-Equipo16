@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, silhouette_samples
 
 from mibici.config import CLASES_RIESGO
 
@@ -110,8 +110,30 @@ def figura_confusion(real, prediccion, conjunto):
     return figura
 
 
-def figuras_clusters(perfiles, estaciones, etiquetas):
-    """Dibuja mapa y perfiles horarios medios de salidas/llegadas por grupo para P3."""
+def figura_silueta(matriz, etiquetas):
+    """Silueta de cada estación ordenada dentro de su grupo, con la silueta media como referencia."""
+    valores = silhouette_samples(matriz, etiquetas)
+    figura, eje = plt.subplots(figsize=(7, 5))
+    base = 0
+    for etiqueta in np.unique(etiquetas):
+        grupo = np.sort(valores[etiquetas == etiqueta])
+        eje.fill_betweenx(np.arange(base, base + len(grupo)), 0, grupo, alpha=0.8)
+        eje.text(-0.02, base + len(grupo) / 2, str(etiqueta), ha="right", va="center")
+        base += len(grupo) + 5
+    eje.axvline(valores.mean(), color="black", linestyle="--", label=f"Media {valores.mean():.3f}")
+    eje.set(
+        xlabel="Silueta",
+        ylabel="Estaciones por grupo",
+        yticks=[],
+        title="P3: silueta por grupo (train)",
+    )
+    eje.legend()
+    figura.tight_layout()
+    return figura
+
+
+def figuras_clusters(perfiles, estaciones, etiquetas, matriz=None):
+    """Dibuja mapa, perfiles horarios medios por grupo y, con `matriz`, la silueta por grupo (P3)."""
     mapa, eje = plt.subplots(figsize=(7, 5))
     figura, ejes = plt.subplots(2, 2, figsize=(12, 7))
     for etiqueta in np.unique(etiquetas):
@@ -136,4 +158,7 @@ def figuras_clusters(perfiles, estaciones, etiquetas):
     figura.suptitle("P3: perfiles horarios medios por grupo")
     figura.tight_layout()
     mapa.tight_layout()
-    return {"mapa": mapa, "perfiles": figura}
+    figuras = {"mapa": mapa, "perfiles": figura}
+    if matriz is not None and 1 < len(np.unique(etiquetas)) < len(matriz):
+        figuras["silueta"] = figura_silueta(matriz, etiquetas)
+    return figuras

@@ -14,6 +14,7 @@ mlflow.db
 # Figuras generadas por make train (se registran como artefactos en MLflow)
 /reports/figures/*
 !/reports/figures/.gitkeep
+/reports/tabla_comparativa_*.csv
 
 # Modelos serializados
 /models/*

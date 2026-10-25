@@ -31,7 +31,9 @@ from mibici.config import (
     MINIMIZAR,
     MLFLOW_TRACKING_URI,
     MODELOS_REGISTRADOS,
+    UMBRAL_ARI_P3,
     UMBRAL_EMPATE_P1,
+    UMBRAL_EMPATE_P3,
 )
 from mibici.modeling.comun import es_mejor, metrica_baseline, modulo_pregunta
 
@@ -82,7 +84,9 @@ def mejor_corrida(question: str):
             if (
                 (run.data.metrics[metrica] - menor_mae) / menor_mae
                 if menor_mae > 0
-                else 0.0 if run.data.metrics[metrica] == 0 else float("inf")
+                else 0.0
+                if run.data.metrics[metrica] == 0
+                else float("inf")
             )
             < UMBRAL_EMPATE_P1
         ]
@@ -93,6 +97,31 @@ def mejor_corrida(question: str):
                 run.data.metrics.get("train_duracion_s", float("inf")),
                 run.data.metrics.get("test_latencia_ms_por_1000", float("inf")),
                 run.data.metrics[metrica],
+            ),
+        )
+    if question == "p3":
+        # Regla de P3: candidata servible (tiene predict) con grupos estables entre semillas y
+        # separados en train (silueta > 0; si no, los grupos no son interpretables). Gana la mayor
+        # silueta de validación; un empate se decide por consistencia temporal en validación
+        # (ARI entre periodos) y luego por costo de entrenamiento.
+        estables = [
+            run
+            for run in runs
+            if run.data.tags.get("stage_of_work") == "candidate"
+            and run.data.metrics.get("train_ari_semillas", 0.0) >= UMBRAL_ARI_P3
+            and run.data.metrics.get("train_silueta", 0.0) > 0
+        ]
+        if not estables:
+            raise ValueError(
+                f"No hay candidatas P3 con ARI entre semillas >= {UMBRAL_ARI_P3} y silueta > 0"
+            )
+        mejor = max(run.data.metrics[metrica] for run in estables)
+        empatadas = [r for r in estables if mejor - r.data.metrics[metrica] < UMBRAL_EMPATE_P3]
+        return min(
+            empatadas,
+            key=lambda run: (
+                -run.data.metrics.get("val_ari_periodo", 0.0),
+                run.data.metrics.get("train_duracion_s", float("inf")),
             ),
         )
     return runs[0]
