@@ -1,0 +1,14 @@
+# Herramientas de calidad y seguridad del proyecto (PyTest, DeepChecks, Bandit y pip-audit).
+# Incluye las dependencias fijas del proyecto; pytest ya está fijado en requirements.txt.
+#   python -m pip install -r requirements-dev.txt
+-r requirements.txt
+
+# Validación de datos. deepchecks 0.19.1 es la última versión publicada y requiere los ajustes de
+# compatibilidad de mibici/compat.py para funcionar con NumPy 2 y scikit-learn 1.9.
+deepchecks==0.19.1
+# deepchecks importa pkg_resources, que setuptools retiró a partir de la versión 81
+setuptools==80.10.2
+
+# Análisis de seguridad del código y de las dependencias
+bandit==1.9.4
+pip-audit==2.10.1

@@ -16,6 +16,12 @@ requirements:
 	$(PYTHON_INTERPRETER) -m pip install -U pip
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
+## Install project dependencies plus quality tools (PyTest, DeepChecks, Bandit, pip-audit)
+.PHONY: requirements-dev
+requirements-dev:
+	$(PYTHON_INTERPRETER) -m pip install -U pip
+	$(PYTHON_INTERPRETER) -m pip install -r requirements-dev.txt
+
 
 ## Delete all compiled Python files
 .PHONY: clean
@@ -41,7 +47,12 @@ format:
 ## Run tests
 .PHONY: test
 test:
-	$(PYTHON_INTERPRETER) -m pytest tests
+	$(PYTHON_INTERPRETER) -m pytest tests/ -q
+
+## Run only the training reproducibility tests (seed 16)
+.PHONY: test-repro
+test-repro:
+	$(PYTHON_INTERPRETER) -m pytest tests/ -q -m reproducibilidad
 
 
 ## Set up Python interpreter environment
