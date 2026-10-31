@@ -1,0 +1,702 @@
+{
+  "base_main": "3f1f54d069dd7d2f992987cf59c63d9f35eb92c9",
+  "origen": "fixtures sintéticos compartidos de tests/conftest.py; sin PII",
+  "python": "3.13.16",
+  "versiones": {
+    "deepchecks": "0.19.1",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "pytest": "9.1.1",
+    "ruff": "0.17.0"
+  },
+  "cortes_config": {
+    "FECHA_INICIO": "2024-10-01",
+    "INICIO_VALIDACION": "2026-04-01",
+    "INICIO_PRUEBA": "2026-07-01",
+    "FECHA_FIN": "2026-09-30",
+    "SEMILLA": 16
+  },
+  "filas": {
+    "viajes": 200,
+    "estaciones": 6
+  },
+  "casos": {
+    "viajes_validos": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:viaje_id": 0,
+          "tipo:inicio": 0,
+          "tipo:fin": 0,
+          "tipo:origen_id": 0,
+          "tipo:destino_id": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadViajes",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 0,
+          "origen_desconocido": 0,
+          "destino_desconocido": 0,
+          "fecha_invalida": 0,
+          "inicio_fuera_periodo": 0,
+          "duracion_invalida": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "viaje_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "inicio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "fin": {
+            "Percent of nulls in sample": 0.0
+          },
+          "origen_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "destino_id": {
+            "Percent of nulls in sample": 0.0
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Passed for 5 relevant columns"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.0,
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "viaje_id": {},
+          "origen_id": {},
+          "destino_id": {}
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "catalogo_valido": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:estacion_id": 0,
+          "tipo:nombre": 0,
+          "tipo:municipio": 0,
+          "tipo:latitud": 0,
+          "tipo:longitud": 0,
+          "tipo:capacidad": 0,
+          "tipo:activa": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadEstaciones",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 0,
+          "capacidad_invalida": 0,
+          "latitud_invalida": 0,
+          "longitud_invalida": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "estacion_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "nombre": {
+            "Percent of nulls in sample": 0.0
+          },
+          "municipio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "latitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "longitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "capacidad": {
+            "Percent of nulls in sample": 0.0
+          },
+          "activa": {
+            "Percent of nulls in sample": 0.0
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Passed for 7 relevant columns"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.0,
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "estacion_id": {},
+          "nombre": {},
+          "municipio": {},
+          "latitud": {},
+          "longitud": {},
+          "capacidad": {},
+          "activa": {}
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "catalogo_p2_filtrado": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:estacion_id": 0,
+          "tipo:nombre": 0,
+          "tipo:municipio": 0,
+          "tipo:latitud": 0,
+          "tipo:longitud": 0,
+          "tipo:capacidad": 0,
+          "tipo:activa": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadEstaciones",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 0,
+          "capacidad_invalida": 0,
+          "latitud_invalida": 0,
+          "longitud_invalida": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "estacion_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "nombre": {
+            "Percent of nulls in sample": 0.0
+          },
+          "municipio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "latitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "longitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "capacidad": {
+            "Percent of nulls in sample": 0.0
+          },
+          "activa": {
+            "Percent of nulls in sample": 0.0
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Passed for 7 relevant columns"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.0,
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "estacion_id": {},
+          "nombre": {},
+          "municipio": {},
+          "latitud": {},
+          "longitud": {},
+          "capacidad": {},
+          "activa": {}
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "catalogo_p2_sin_filtrar": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:estacion_id": 0,
+          "tipo:nombre": 0,
+          "tipo:municipio": 0,
+          "tipo:latitud": 0,
+          "tipo:longitud": 0,
+          "tipo:capacidad": 0,
+          "tipo:activa": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadEstaciones",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 0,
+          "capacidad_invalida": 1,
+          "latitud_invalida": 0,
+          "longitud_invalida": 0
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "{'capacidad_invalida': 1}"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "estacion_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "nombre": {
+            "Percent of nulls in sample": 0.0
+          },
+          "municipio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "latitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "longitud": {
+            "Percent of nulls in sample": 0.0
+          },
+          "capacidad": {
+            "Percent of nulls in sample": 0.0
+          },
+          "activa": {
+            "Percent of nulls in sample": 0.0
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Passed for 7 relevant columns"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.0,
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "estacion_id": {},
+          "nombre": {},
+          "municipio": {},
+          "latitud": {},
+          "longitud": {},
+          "capacidad": {},
+          "activa": {}
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "viajes_con_anomalias": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:viaje_id": 0,
+          "tipo:inicio": 0,
+          "tipo:fin": 0,
+          "tipo:origen_id": 0,
+          "tipo:destino_id": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadViajes",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 1,
+          "origen_desconocido": 1,
+          "destino_desconocido": 1,
+          "fecha_invalida": 0,
+          "inicio_fuera_periodo": 0,
+          "duracion_invalida": 1
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "{'id_repetido': 1, 'origen_desconocido': 1, 'destino_desconocido': 1, 'duracion_invalida': 1}"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "viaje_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "inicio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "fin": {
+            "Percent of nulls in sample": 0.0
+          },
+          "origen_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "destino_id": {
+            "Percent of nulls in sample": 0.004975124378109453
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "Found 1 columns with ratio of nulls above threshold: \n{'destino_id': '0.5%'}"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.00497512437810943,
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "viaje_id": {},
+          "origen_id": {},
+          "destino_id": {}
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "tipos_invalidos": {
+      "esquema": {
+        "check": "EsquemaColumnas",
+        "valor": {
+          "tipo:viaje_id": 0,
+          "tipo:inicio": 0,
+          "tipo:fin": 0,
+          "tipo:origen_id": 0,
+          "tipo:destino_id": 1
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "{'tipo:destino_id': 1}"
+          }
+        ]
+      },
+      "integridad": {
+        "check": "IntegridadViajes",
+        "valor": {
+          "filas_vacias": 0,
+          "id_repetido": 0,
+          "origen_desconocido": 0,
+          "destino_desconocido": 1,
+          "fecha_invalida": 0,
+          "inicio_fuera_periodo": 0,
+          "duracion_invalida": 0
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "{'destino_desconocido': 1}"
+          }
+        ]
+      },
+      "nulos": {
+        "check": "PercentOfNulls",
+        "valor": {
+          "viaje_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "inicio": {
+            "Percent of nulls in sample": 0.0
+          },
+          "fin": {
+            "Percent of nulls in sample": 0.0
+          },
+          "origen_id": {
+            "Percent of nulls in sample": 0.0
+          },
+          "destino_id": {
+            "Percent of nulls in sample": 0.0
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Passed for 5 relevant columns"
+          }
+        ]
+      },
+      "duplicados": {
+        "check": "DataDuplicates",
+        "valor": 0.0,
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": ""
+          }
+        ]
+      },
+      "tipos_mixtos": {
+        "check": "MixedDataTypes",
+        "valor": {
+          "viaje_id": {},
+          "origen_id": {},
+          "destino_id": {
+            "strings": 0.005,
+            "numbers": 0.995
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": ""
+          }
+        ]
+      }
+    },
+    "temporal": {
+      "p1": {
+        "check": "IntegridadTemporal",
+        "valor": {
+          "fecha_invalida": 0,
+          "vacia:train": 0,
+          "fuera_corte:train": 0,
+          "vacia:val": 0,
+          "fuera_corte:val": 0,
+          "vacia:test": 0,
+          "fuera_corte:test": 0,
+          "clave_repetida": 0,
+          "clave_nula": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "p2": {
+        "check": "IntegridadTemporal",
+        "valor": {
+          "fecha_invalida": 0,
+          "vacia:train": 0,
+          "fuera_corte:train": 0,
+          "vacia:val": 0,
+          "fuera_corte:val": 0,
+          "vacia:test": 0,
+          "fuera_corte:test": 0,
+          "clave_repetida": 0,
+          "clave_nula": 0
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Sin incidencias"
+          }
+        ]
+      },
+      "fuga_intencional": {
+        "check": "IntegridadTemporal",
+        "valor": {
+          "fecha_invalida": 0,
+          "vacia:train": 0,
+          "fuera_corte:train": 1,
+          "vacia:val": 0,
+          "fuera_corte:val": 0,
+          "vacia:test": 0,
+          "fuera_corte:test": 0,
+          "clave_repetida": 1,
+          "clave_nula": 0
+        },
+        "condiciones": [
+          {
+            "estado": "FAIL",
+            "detalle": "{'fuera_corte:train': 1, 'clave_repetida': 1}"
+          }
+        ]
+      }
+    },
+    "drift": {
+      "control_identico": {
+        "check": "FeatureDrift",
+        "valor": {
+          "demanda_lag_1": {
+            "Drift score": 0.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          },
+          "demanda_media_7": {
+            "Drift score": 0.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Revisar drift en: []; no implica fallo del pipeline"
+          }
+        ]
+      },
+      "train_vs_test": {
+        "check": "FeatureDrift",
+        "valor": {
+          "demanda_lag_1": {
+            "Drift score": 0.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          },
+          "demanda_media_7": {
+            "Drift score": 0.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "PASS",
+            "detalle": "Revisar drift en: []; no implica fallo del pipeline"
+          }
+        ]
+      },
+      "desplazamiento_intencional": {
+        "check": "FeatureDrift",
+        "valor": {
+          "demanda_lag_1": {
+            "Drift score": 1.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          },
+          "demanda_media_7": {
+            "Drift score": 1.0,
+            "Method": "Kolmogorov-Smirnov",
+            "Importance": null
+          }
+        },
+        "condiciones": [
+          {
+            "estado": "WARN",
+            "detalle": "Revisar drift en: ['demanda_lag_1', 'demanda_media_7']; no implica fallo del pipeline"
+          }
+        ]
+      }
+    }
+  }
+}
