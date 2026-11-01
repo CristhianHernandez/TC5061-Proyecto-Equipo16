@@ -1,0 +1,26 @@
+# Clon limpio en el commit ebeb6a2
+$ python -m bandit -r mibici
+Code scanned:
+	Total lines of code: 3290
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 5
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 5
+Files skipped (0):
+exit=1
+$ python -m pip_audit -r requirements.txt
+No known vulnerabilities found
+Name   Skip Reason
+------ ---------------------------------------------------------------------
+mibici Dependency not found on PyPI and could not be audited: mibici (0.0.1)
+exit=0

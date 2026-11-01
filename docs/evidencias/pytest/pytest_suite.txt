@@ -1,0 +1,37 @@
+# Clon limpio de test/modelos-documentacion en el commit ebeb6a2; Python 3.13.1; entorno nuevo
+$ python -m pytest tests/ -q
+........................................................................ [ 37%]
+........................................................................ [ 75%]
+...............................................                          [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/deepchecks/core/serialization/dataframe/html.py:16
+  <venv>/lib/python3.13/site-packages/deepchecks/core/serialization/dataframe/html.py:16: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    from pkg_resources import parse_version
+
+tests/test_dataset.py::test_ingesta_bajo_mlflow_run_registra_version_de_datos
+  <venv>/lib/python3.13/site-packages/mlflow/store/tracking/sqlalchemy_store.py:327: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+    sqlalchemy.orm.configure_mappers()
+
+tests/test_limites.py: 1 warning
+tests/test_modeling.py: 23 warnings
+tests/test_p3.py: 5 warnings
+tests/test_registro.py: 4 warnings
+tests/test_reproducibilidad.py: 6 warnings
+  <venv>/lib/python3.13/site-packages/mlflow/data/digest_utils.py:29: Pandas4Warning: Starting with pandas version 4.0 all arguments of all will be keyword-only.
+    string_columns = trimmed_df.columns[(df.map(type) == str).all(0)]
+
+tests/test_limites.py: 2 warnings
+tests/test_modeling.py: 40 warnings
+tests/test_p3.py: 8 warnings
+tests/test_registro.py: 6 warnings
+tests/test_reproducibilidad.py: 12 warnings
+  <venv>/lib/python3.13/site-packages/mlflow/types/utils.py:440: UserWarning: Hint: Inferred schema contains integer column(s). Integer columns in Python cannot represent missing values. If your input data contains missing values at inference time, it will be encoded as floats and will cause a schema enforcement error. The best way to avoid this problem is to infer the model schema based on a realistic data sample (training dataset) that includes missing values. Alternatively, you can declare integer columns as doubles (float64) whenever these columns may have missing values. See `Handling Integers With Missing Values <https://www.mlflow.org/docs/latest/models.html#handling-integers-with-missing-values>`_ for more details.
+    warnings.warn(
+
+tests/test_modelos_p1_p2_p3.py::test_metricas_riesgo_una_clase_sin_positivos_de_riesgo
+  <venv>/lib/python3.13/site-packages/sklearn/metrics/_classification.py:614: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+191 passed, 110 warnings in 152.51s (0:02:32)
+exit=0
