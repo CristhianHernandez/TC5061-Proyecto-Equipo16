@@ -47,13 +47,21 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── README.md
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
 ├── docs/                  <- auditoría de la entrega
+│   └── evidencias/
+│       ├── pytest/        <- salidas y captura de pruebas y estilo
+│       ├── deepchecks/    <- validación de datos
+│       └── seguridad/     <- auditoría de seguridad
 ├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
 ├── reports/figures/       <- copia local de las gráficas (fuera de Git, salvo .gitkeep)
 ├── requirements.txt       <- dependencias con versión fija
+├── requirements-dev.txt   <- herramientas de pruebas, calidad y seguridad
+├── pytest.ini             <- marcas y ejecución estricta de pytest
 ├── tests/                 <- pruebas con datos sintéticos y MLflow temporal (pytest)
 └── mibici/
+    ├── compat.py          <- compatibilidad de dependencias para DeepChecks
+    ├── validation/        <- contratos de calidad e integridad de datos
     ├── config.py          <- única fuente de rutas, fechas, semillas, hiperparámetros y nombres del registry
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
@@ -81,6 +89,7 @@ cd TC5061-Proyecto-Equipo16
 python3.13 -m venv .venv          # Windows: py -3.13 -m venv .venv
 source .venv/bin/activate         # Windows: .venv\Scripts\activate
 make requirements                 # pip install -r requirements.txt (incluye mlflow y el paquete mibici)
+python -m pip install -r requirements-dev.txt
 cp .env.example .env              # Windows: copy .env.example .env
 ```
 
@@ -311,15 +320,72 @@ tipos de scikit-learn, numpy y del paquete `mibici`.
 
 ## Pruebas y estilo
 
+Desde la raíz, con Python 3.13 y las dependencias de desarrollo instaladas:
+
 ```bash
-make lint      # ruff format --check y ruff check
-make test      # pytest con datos sintéticos; no descarga nada ni usa data/
+# Comando único de la suite
+python -m pytest tests/ -q
+# Modelos P1-P3 y selecciones por marca
+python -m pytest tests/test_modelos_p1_p2_p3.py -q
+python -m pytest tests/ -m limite -q
+python -m pytest tests/ -m reproducibilidad -q
+# Calidad de datos
+python -m pytest tests/test_calidad_datos.py -q
+python docs/evidencias/deepchecks/generar.py
+# Seguridad y estilo
+python -m bandit -r mibici
+python -m pip_audit -r requirements.txt
+python -m ruff check
+python -m ruff format --check
+```
+
+Atajos existentes: `make lint` y `make test`. El `include` de Ruff en `pyproject.toml` abarca
+`mibici/` como código Python, por lo que las pruebas se comprueban indicando archivos explícitos.
+Para los modelos P1-P3:
+
+```bash
+python -m ruff check tests/test_modelos_p1_p2_p3.py
+python -m ruff format --check tests/test_modelos_p1_p2_p3.py
 ```
 
 Las pruebas usan un MLflow temporal (SQLite en un directorio temporal) y datos sintéticos, así que no tocan
 el experimento real. Cubren el `MLproject` (entradas, parámetros y defaults vacíos), la reanudación de la
 corrida de `mlflow run`, los nested runs, los artefactos por subcarpeta, la firma del modelo, la mejora
 contra el baseline, el registro con aliases y la carga por `@champion`.
+
+El nuevo módulo reutiliza los fixtures compartidos sin registrar corridas: verifica métricas calculadas
+a mano, forma, tipos y dominio de predicciones de P1/P2/P3, particiones sin traslape y rezagos sin
+información contemporánea o futura. No descarga datos ni usa `data/` o el servidor del equipo.
+La reproducibilidad ya se comprueba en `tests/test_reproducibilidad.py`.
+
+| Herramienta / selección | Cómo interpretar un fallo o aviso |
+|---|---|
+| Pytest: `limite` | Falló el comportamiento esperado ante entradas vacías, fronteras o parámetros inválidos; revisar la aserción y el contrato. |
+| Pytest: `reproducibilidad` | Cambiaron predicciones o métricas bajo condiciones controladas; revisar semilla, datos y versiones. |
+| Pytest: `integracion` | Falló un recorrido de varias etapas; revisar entrenamiento, evaluación y, si interviene, MLflow temporal. |
+| DeepChecks | Un `FAIL` de integridad requiere revisar datos y contrato. Una alerta de drift (`WARN`) pide investigar cambios de distribución y métricas; no implica por sí sola un fallo de código. |
+| Bandit | La auditoría documenta cinco hallazgos bajos en `mibici/tracking.py`: B404 (uno), B603 (dos) y B607 (dos). Los argumentos son constantes y no usan `shell=True`; queda riesgo residual por resolver Git mediante `PATH`. Revisar cualquier hallazgo adicional. |
+| pip-audit | El paquete local `mibici` no es auditable en PyPI; ese aviso es esperado. Las vulnerabilidades de dependencias auditables requieren revisión. |
+| Ruff | `check` informa infracciones de estilo o imports; `format --check` indica archivos cuyo formato debe ajustarse. |
+
+La validación de datos se documenta en
+[`docs/evidencias/deepchecks/VALIDACION.md`](docs/evidencias/deepchecks/VALIDACION.md)
+y la auditoría de seguridad en
+[`docs/evidencias/seguridad/informe_seguridad.md`](docs/evidencias/seguridad/informe_seguridad.md).
+
+Las evidencias de pruebas y estilo están en `docs/evidencias/pytest/`:
+`pytest_suite.txt`, `ruff.txt`, `seguridad.txt` y `pytest_suite.png`, generadas desde un clon limpio.
+Las de calidad de datos están en `docs/evidencias/deepchecks/` y las de seguridad en
+`docs/evidencias/seguridad/`.
+
+### PR de la entrega de testing
+
+| Contribución | Responsable | Revisión |
+|---|---|---|
+| [PR #10](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/10) | CH1 - Cristhian | Revisó LH3 |
+| [PR #11](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/11) | LH3 - Luis | Revisó HH2 |
+| [PR #12](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/12) | HH2 - Horacio | Revisó DH4 |
+| [PR de esta rama: `test/modelos-documentacion`](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pulls) | DH4 - Derick | Revisa CH1 |
 
 ## Reproducibilidad y buenas prácticas del equipo
 
