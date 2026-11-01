@@ -1,0 +1,87 @@
+Run started:2026-11-01 14:39:33.398416+00:00
+
+Test results:
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: mibici\tracking.py:18:0
+17	from pathlib import Path
+18	import subprocess
+19	
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: mibici\tracking.py:49:10
+48	    """
+49	    sha = subprocess.run(
+50	        ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True
+51	    ).stdout.strip()
+52	    cambios = subprocess.run(
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: mibici\tracking.py:49:10
+48	    """
+49	    sha = subprocess.run(
+50	        ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True
+51	    ).stdout.strip()
+52	    cambios = subprocess.run(
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: mibici\tracking.py:52:14
+51	    ).stdout.strip()
+52	    cambios = subprocess.run(
+53	        ["git", "status", "--porcelain", "--untracked-files=no"],
+54	        cwd=repo,
+55	        capture_output=True,
+56	        text=True,
+57	        check=True,
+58	    ).stdout.strip()
+59	    return f"{sha}-sucio" if cambios else sha
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: mibici\tracking.py:52:14
+51	    ).stdout.strip()
+52	    cambios = subprocess.run(
+53	        ["git", "status", "--porcelain", "--untracked-files=no"],
+54	        cwd=repo,
+55	        capture_output=True,
+56	        text=True,
+57	        check=True,
+58	    ).stdout.strip()
+59	    return f"{sha}-sucio" if cambios else sha
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 3013
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 5
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 5
+Files skipped (0):
