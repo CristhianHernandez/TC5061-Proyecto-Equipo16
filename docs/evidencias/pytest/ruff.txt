@@ -1,0 +1,13 @@
+# Clon limpio en el commit ebeb6a2
+$ python -m ruff check
+All checks passed!
+exit=0
+$ python -m ruff format --check
+18 files already formatted
+exit=0
+$ python -m ruff check tests/test_modelos_p1_p2_p3.py
+All checks passed!
+exit=0
+$ python -m ruff format --check tests/test_modelos_p1_p2_p3.py
+1 file already formatted
+exit=0
