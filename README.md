@@ -378,6 +378,16 @@ Las evidencias de pruebas y estilo están en `docs/evidencias/pytest/`:
 Las de calidad de datos están en `docs/evidencias/deepchecks/` y las de seguridad en
 `docs/evidencias/seguridad/`.
 
+### Evidencia de ejecución
+
+**Pruebas con PyTest** (`python -m pytest tests/ -q`):
+
+![Ejecución de la suite de PyTest](docs/evidencias/pytest/pytest_suite.png)
+
+**Chequeo de seguridad** (`python -m bandit -r mibici` y `python -m pip_audit -r requirements.txt`):
+
+![Ejecución de bandit y pip-audit](docs/evidencias/seguridad/seguridad_ejecucion_1.png)
+
 ### PR de la entrega de testing
 
 | Contribución | Responsable | Revisión |
