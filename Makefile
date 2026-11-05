@@ -114,6 +114,11 @@ predict:
 compare:
 	$(MLFLOW_RUN) -e compare
 
+## Exportar el champion de P1 del registry a model_bundle/ y probar una predicción local
+.PHONY: export-model
+export-model:
+	$(PYTHON_INTERPRETER) -m mibici.serving.exportar
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

@@ -24,6 +24,9 @@ mlflow.db
 *.joblib
 *.onnx
 
+# Copia del modelo champion para el contenedor (make export-model): entra a la imagen, no a Git
+/model_bundle/
+
 # Variables de entorno y credenciales
 .env.*
 !.env.example

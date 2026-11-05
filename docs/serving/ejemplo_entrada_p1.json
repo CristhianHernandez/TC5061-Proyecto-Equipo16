@@ -1,0 +1,30 @@
+{
+  "registros": [
+    {
+      "dia_semana": 2,
+      "mes": 9,
+      "es_fin_semana": 0,
+      "dia_anio": 273,
+      "es_festivo": 0,
+      "demanda_lag_1": 40.0,
+      "demanda_lag_7": 29.0,
+      "demanda_media_7": 37.714286,
+      "capacidad": 15,
+      "latitud": 20.675401,
+      "longitud": -103.345665
+    },
+    {
+      "dia_semana": 2,
+      "mes": 9,
+      "es_fin_semana": 0,
+      "dia_anio": 273,
+      "es_festivo": 0,
+      "demanda_lag_1": 403.0,
+      "demanda_lag_7": 375.0,
+      "demanda_media_7": 398.142857,
+      "capacidad": 39,
+      "latitud": 20.67414,
+      "longitud": -103.355535
+    }
+  ]
+}
