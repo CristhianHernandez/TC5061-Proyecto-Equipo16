@@ -217,3 +217,16 @@ DESCRIPCIONES_MODELOS = {
         "con estabilidad medida por ARI."
     ),
 }
+
+# Semana 8: servicio de inferencia (mibici/serving). Se sirve el champion de P1 (regresión de la
+# demanda D+1). La ruta recomendada empaqueta en la imagen una copia del modelo descargada del
+# registry (MODEL_PATH, fuera de Git); si no existe, se carga en línea con MODEL_URI desde el
+# servidor de MLFLOW_TRACKING_URI. Ambas se pueden cambiar con variables de entorno.
+PREGUNTA_SERVICIO = "p1"
+MODEL_URI = os.getenv(
+    "MODEL_URI", f"models:/{MODELOS_REGISTRADOS[PREGUNTA_SERVICIO]}@{ALIAS_PRODUCCION}"
+)
+MODEL_PATH = Path(os.getenv("MODEL_PATH", str(PROJ_ROOT / "model_bundle")))
+METADATOS_MODELO = "modelo_servido.json"  # linaje de la copia, junto al MLmodel
+# Petición de ejemplo con registros reales del conjunto de prueba (contrato en docs/serving/)
+EJEMPLO_SERVICIO = PROJ_ROOT / "docs" / "serving" / "ejemplo_entrada_p1.json"
