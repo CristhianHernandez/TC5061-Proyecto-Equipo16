@@ -1,0 +1,8 @@
+# LH3: contrato HTTP y ejecución local. Instalar junto al entorno del modelo.
+# HH2 puede reutilizar estas versiones al preparar requirements-serving.txt.
+fastapi==0.162.0
+starlette==1.10.0
+pydantic==2.14.2
+uvicorn==0.54.0
+# Cliente HTTP usado por TestClient y por la prueba local de la API.
+httpx==0.28.1
