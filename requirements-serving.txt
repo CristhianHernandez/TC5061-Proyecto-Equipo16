@@ -1,0 +1,11 @@
+﻿fastapi==0.162.2
+uvicorn==0.54.0
+mlflow==3.17.2
+numpy==2.5.4
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.18.1
+skops==0.16.0
+loguru==0.7.3
+python-dotenv==1.2.4
+typer==0.27.3
