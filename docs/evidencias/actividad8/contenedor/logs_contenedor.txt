@@ -1,0 +1,20 @@
+2026-11-08 00:46:30.536 | INFO     | mibici.config:<module>:17 - PROJ_ROOT path is: /app
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+2026/11/08 00:46:31 WARNING mlflow.utils.requirements_utils: Detected one or more mismatches between the model's dependencies and the current Python environment:
+ - mlflow (current: 3.17.2, required: mlflow==3.17.1)
+ - psutil (current: uninstalled, required: psutil==7.2.2)
+ - pytest (current: uninstalled, required: pytest==9.1.1)
+To fix the mismatches, call `mlflow.pyfunc.get_model_dependencies(model_uri)` to fetch the model's environment and install dependencies using the resulting environment file.
+2026-11-08 00:46:31.814 | INFO     | mibici.serving.model_loader:cargar_modelo:234 - Modelo mibici-equipo16-p1-demanda v1 cargado (copia_local)
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     172.17.0.1:56394 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:56396 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:56412 - "POST /predict HTTP/1.1" 200 OK
+INFO:     172.17.0.1:56422 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     172.17.0.1:56430 - "GET /docs HTTP/1.1" 200 OK
+INFO:     172.17.0.1:55924 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:55940 - "POST /predict HTTP/1.1" 200 OK
+INFO:     172.17.0.1:55954 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     172.17.0.1:55966 - "GET /docs HTTP/1.1" 200 OK

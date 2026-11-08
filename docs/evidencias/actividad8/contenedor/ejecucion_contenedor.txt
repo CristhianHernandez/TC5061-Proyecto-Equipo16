@@ -1,0 +1,46 @@
+$ docker version --format "{{.Client.Version}} / {{.Server.Version}}"
+27.4.0 / 27.4.0
+
+$ docker images mibici-api:actividad8
+REPOSITORY   TAG          IMAGE ID       SIZE
+mibici-api   actividad8   26a7827e8d9b   1.31GB
+
+$ docker run -d --rm --name mibici-api -p 8000:8000 mibici-api:actividad8
+
+$ docker ps --filter name=mibici-api
+NAMES        IMAGE                   STATUS          PORTS
+mibici-api   mibici-api:actividad8   Up 16 seconds   0.0.0.0:8000->8000/tcp
+
+$ docker exec mibici-api id
+uid=999(appuser) gid=999(appgroup) groups=999(appgroup)
+
+$ curl -i http://127.0.0.1:8000/health
+HTTP/1.1 200 OK
+date: Sun, 08 Nov 2026 00:46:46 GMT
+server: uvicorn
+content-length: 144
+content-type: application/json
+
+{"estado":"listo","modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"f0b724d2f67c48c8a2164d551269c1b6"}}
+
+$ curl -i -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d @docs/serving/ejemplo_entrada_p1.json
+HTTP/1.1 200 OK
+date: Sun, 08 Nov 2026 00:46:46 GMT
+server: uvicorn
+content-length: 182
+content-type: application/json
+
+{"predicciones":[40.697957479000046,276.77983750628846],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"f0b724d2f67c48c8a2164d551269c1b6"}}
+
+$ curl -i -X POST http://127.0.0.1:8000/predict -H 'Content-Type: application/json' -d '{"registros":[{"dia_semana":2,"mes":13}]}'
+HTTP/1.1 422 Unprocessable Content
+date: Sun, 08 Nov 2026 00:46:46 GMT
+server: uvicorn
+content-length: 622
+content-type: application/json
+
+{"detail":[{"loc":["body","registros",0,"mes"],"msg":"Input should be less than or equal to 12","type":"less_than_equal"},{"loc":["body","registros",0,"es_fin_semana"],"msg":"Field required","type":"missing"},{"loc":["body","registros",0,"dia_anio"],"msg":"Field required","type":"missing"},{"loc":["body","registros",0,"es_festivo"],"msg":"Field required","type":"missing"},{"loc":["body","registros",0,"capacidad"],"msg":"Field required","type":"missing"},{"loc":["body","registros",0,"latitud"],"msg":"Field required","type":"missing"},{"loc":["body","registros",0,"longitud"],"msg":"Field required","type":"missing"}]}
+
+$ curl -s -o /dev/null -w "%{http_code}
+" http://127.0.0.1:8000/docs
+200
