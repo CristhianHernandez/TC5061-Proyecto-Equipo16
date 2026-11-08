@@ -1,0 +1,12 @@
+{
+    "predicciones": [
+        40.697957479000046,
+        276.77983750628846
+    ],
+    "modelo": {
+        "nombre": "mibici-equipo16-p1-demanda",
+        "version": "1",
+        "alias": "champion",
+        "run_id": "f0b724d2f67c48c8a2164d551269c1b6"
+    }
+}

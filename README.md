@@ -42,21 +42,27 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 
 ```
 ├── MLproject              <- MLflow Project: entradas ingest, train, register y predict
+├── Containerfile          <- imagen OCI de la API (Docker o Podman) con el champion de P1 empaquetado
+├── .dockerignore          <- contexto de build mínimo (sin datos, mlruns, mlflow.db ni .env)
 ├── python_env.yaml        <- entorno del proyecto (Python 3.13 + requirements.txt)
 ├── Makefile               <- atajos: make mlflow, data, baselines, train, register, predict, lint, test
 ├── README.md
+├── model_bundle/          <- copia del champion exportada con make export-model (fuera de Git)
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
-├── docs/                  <- auditoría de la entrega
+├── docs/                  <- auditoría, contrato de serving (serving/) y evidencias
 │   └── evidencias/
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
 │       ├── deepchecks/    <- validación de datos
-│       └── seguridad/     <- auditoría de seguridad
+│       ├── seguridad/     <- auditoría de seguridad
+│       └── actividad8/    <- API y contenedor: salidas reales, prueba E2E y captura
 ├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
 ├── reports/figures/       <- copia local de las gráficas (fuera de Git, salvo .gitkeep)
 ├── requirements.txt       <- dependencias con versión fija
 ├── requirements-dev.txt   <- herramientas de pruebas, calidad y seguridad
+├── requirements-serving.txt <- dependencias mínimas de la imagen de la API
+├── scripts/smoke_container.sh <- build, run y prueba E2E del contenedor
 ├── pytest.ini             <- marcas y ejecución estricta de pytest
 ├── tests/                 <- pruebas con datos sintéticos y MLflow temporal (pytest)
 └── mibici/
@@ -65,6 +71,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     ├── config.py          <- única fuente de rutas, fechas, semillas, hiperparámetros y nombres del registry
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
+    ├── serving/           <- model_loader.py, exportar.py (champion -> model_bundle), api.py y schemas.py
     ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
     ├── plots.py           <- figuras que se registran como artefactos
     └── modeling/
@@ -317,6 +324,180 @@ modelo = mlflow.pyfunc.load_model("models:/mibici-equipo16-p1-demanda@champion")
 
 Los modelos de scikit-learn se guardan con el formato seguro `skops`; solo se declaran como confiables los
 tipos de scikit-learn, numpy y del paquete `mibici`.
+
+## Servicio de inferencia: API REST en contenedor
+
+El champion de P1 (demanda diaria por estación) se sirve como API REST con **FastAPI + Pydantic**
+dentro de una imagen OCI que corre en **Docker o Podman**. El contrato completo de entrada y salida
+está en [`docs/serving/contrato_p1.md`](docs/serving/contrato_p1.md).
+
+| Campo | Valor |
+|---|---|
+| Modelo | `mibici-equipo16-p1-demanda` (`HistGradientBoostingRegressor`, pérdida Poisson) |
+| URI | `models:/mibici-equipo16-p1-demanda@champion` |
+| Versión | La que resuelve el alias al exportar; queda fija en `model_bundle/modelo_servido.json` y la reporta `/health` |
+| Entrada | 11 variables numéricas por registro (calendario, rezagos de demanda y estación) |
+| Salida | Viajes esperados por registro (`float` > 0), en el mismo orden |
+| Endpoints | `GET /health`, `POST /predict`, `GET /docs` (Swagger) y `GET /openapi.json` |
+
+### Estrategia: modelo empaquetado en la imagen
+
+`make export-model` resuelve `@champion` a una versión concreta del Model Registry, la descarga a
+`model_bundle/` (ignorada por Git, incluida en el contexto de build) y comprueba que predice el ejemplo
+del contrato. El `Containerfile` copia esa carpeta en `/app/model_bundle` (`MODEL_PATH`) y la API la
+carga una sola vez al arrancar. Así:
+
+- la inferencia **no depende del servidor de MLflow** ni de las rutas absolutas de artefactos que guarda
+  el registry local de cada integrante;
+- un cambio posterior del alias no altera en silencio una imagen ya construida: para servir otro champion
+  se vuelve a exportar y a construir;
+- si no hay `model_bundle/`, el loader intenta `MODEL_URI` contra `MLFLOW_TRACKING_URI` (alternativa no
+  usada en la imagen).
+
+**¿Por qué tiempo real y no lotes?** P1 responde a una pregunta operativa puntual (cuántos viajes
+esperar hoy en una estación) que consultan aplicaciones de rebalanceo o tableros en el momento en que
+se planea una ruta; cada petición es ligera (11 variables, milisegundos) y el resultado se necesita de
+inmediato. El proceso por lotes (`make predict`, entrada `predict` del MLflow Project) se mantiene para
+puntuar el conjunto de prueba completo y generar reportes.
+
+### Prerrequisitos
+
+- Docker 24+ o Podman 4+ (validado con Docker 27.4 en macOS arm64).
+- El entorno del proyecto instalado (ver [Instalación](#instalación)) y el Model Registry con el champion
+  de P1 (`make mlflow` y la secuencia de [registro](#reproducir-con-el-mlflow-project)).
+- Puerto 8000 libre en el host.
+
+### 1. Exportar el champion
+
+```bash
+make mlflow                     # en otra terminal; en macOS: make mlflow MLFLOW_PORT=5001
+make export-model               # en macOS: make export-model MLFLOW_PORT=5001
+```
+
+Imprime el modelo y la predicción del ejemplo, por ejemplo:
+
+```json
+{
+  "modelo": {"nombre": "mibici-equipo16-p1-demanda", "version": "1", "alias": "champion", "run_id": "f0b724d2f67c48c8a2164d551269c1b6"},
+  "predicciones": [40.697957479000046, 276.77983750628846]
+}
+```
+
+### 2. Construir y arrancar el contenedor
+
+```bash
+# Docker (con Podman, sustituir docker por podman; los argumentos son iguales)
+docker build -t mibici-api:actividad8 -f Containerfile .
+docker run --rm --name mibici-api -p 8000:8000 mibici-api:actividad8
+```
+
+La imagen parte de `python:3.13-slim`, instala solo `requirements-serving.txt`, corre como usuario sin
+privilegios (`appuser`) y expone Uvicorn en `0.0.0.0:8000`. Para detenerla: `Ctrl+C` o
+`docker stop mibici-api` desde otra terminal (`--rm` elimina el contenedor al detenerse).
+
+### 3. Probar desde el host
+
+```bash
+curl -i http://127.0.0.1:8000/health
+
+curl -i -X POST http://127.0.0.1:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d @docs/serving/ejemplo_entrada_p1.json
+```
+
+Petición ([`docs/serving/ejemplo_entrada_p1.json`](docs/serving/ejemplo_entrada_p1.json), estaciones 55 y
+51 el 30 de septiembre de 2026, datos de prueba sin información personal):
+
+```json
+{
+  "registros": [
+    {"dia_semana": 2, "mes": 9, "es_fin_semana": 0, "dia_anio": 273, "es_festivo": 0,
+     "demanda_lag_1": 40.0, "demanda_lag_7": 29.0, "demanda_media_7": 37.714286,
+     "capacidad": 15, "latitud": 20.675401, "longitud": -103.345665},
+    {"dia_semana": 2, "mes": 9, "es_fin_semana": 0, "dia_anio": 273, "es_festivo": 0,
+     "demanda_lag_1": 403.0, "demanda_lag_7": 375.0, "demanda_media_7": 398.142857,
+     "capacidad": 39, "latitud": 20.67414, "longitud": -103.355535}
+  ]
+}
+```
+
+Respuesta real del contenedor (`HTTP/1.1 200 OK`):
+
+```json
+{
+  "predicciones": [40.697957479000046, 276.77983750628846],
+  "modelo": {
+    "nombre": "mibici-equipo16-p1-demanda",
+    "version": "1",
+    "alias": "champion",
+    "run_id": "f0b724d2f67c48c8a2164d551269c1b6"
+  }
+}
+```
+
+La demanda observada ese día fue de 32 y 442 viajes. `version` y `run_id` dependen del registry
+donde se exportó (en el registry de CH1 el champion es la versión 2, con las mismas predicciones).
+
+| Endpoint | Respuesta |
+|---|---|
+| `GET /health` | `200 {"estado": "listo", "modelo": {...}}`; `503 {"estado": "no_disponible"}` si el modelo no cargó o su firma no coincide con el contrato |
+| `POST /predict` | `200` con una predicción por registro; `422` si falta una variable, sobra una, el tipo es incorrecto o está fuera de dominio (por ejemplo `mes: 13`); `500` controlado si falla la inferencia, sin trazas ni rutas |
+| `GET /docs` | Swagger UI para probar la API desde el navegador: <http://127.0.0.1:8000/docs> |
+
+Los rezagos (`demanda_lag_1`, `demanda_lag_7`, `demanda_media_7`) son opcionales: se envían como
+`null` o se omiten cuando no hay historial.
+
+### 4. Prueba extremo a extremo contra el contenedor
+
+```bash
+bash scripts/smoke_container.sh            # build, run, curl, pytest E2E y detención
+SIN_BUILD=1 bash scripts/smoke_container.sh   # reutiliza la imagen ya construida
+
+# o con el contenedor ya en ejecución:
+MIBICI_API_URL=http://127.0.0.1:8000 python -m pytest tests/test_serving_e2e.py -q -m contenedor
+```
+
+`tests/test_serving_e2e.py` llama por HTTP al contenedor real: salud, predicción con el ejemplo del
+contrato, un registro sin rezagos y seis entradas inválidas que deben dar 422. Sin `MIBICI_API_URL` el
+módulo se omite, así que `python -m pytest tests/ -q` no requiere el contenedor.
+
+### Variables de entorno
+
+| Variable | En la imagen | Uso |
+|---|---|---|
+| `MODEL_PATH` | `/app/model_bundle` | Copia local del modelo que carga la API |
+| `MODEL_URI` | `models:/mibici-equipo16-p1-demanda@champion` | Modelo del registry si no hay copia local (solo al exportar o en desarrollo) |
+| `MLFLOW_TRACKING_URI` | no se usa | Servidor de MLflow para `make export-model` |
+| `MIBICI_API_URL` | — | URL de la API para la prueba E2E |
+
+### Solución de problemas
+
+| Síntoma | Causa y solución |
+|---|---|
+| `COPY model_bundle/ ...: not found` al construir | Falta exportar el modelo: `make export-model` antes del build |
+| `make export-model` no conecta o el navegador da 403 en el 5000 | AirPlay ocupa el puerto en macOS: `make mlflow MLFLOW_PORT=5001` y `make export-model MLFLOW_PORT=5001` |
+| `RESOURCE_DOES_NOT_EXIST` al exportar | El registry no tiene `@champion` de P1: ejecutar la entrada `register` de P1 |
+| `/health` responde 503 | El modelo no cargó; revisar `docker logs mibici-api` (sin `model_bundle/MLmodel` o firma distinta al contrato) |
+| `Bind for 0.0.0.0:8000 failed` | Puerto ocupado: `-p 8080:8000` y usar `http://127.0.0.1:8080` |
+| `Cannot connect to the Docker daemon` | Abrir Docker Desktop o `podman machine start` |
+| Aviso `mlflow==3.17.1` requerido en los logs | El modelo se registró con 3.17.1 y la imagen usa 3.17.2 (corrección de CVE); es de parche y no cambia las predicciones |
+
+### Evidencia de ejecución en contenedor
+
+Salidas reales en [`docs/evidencias/actividad8/contenedor/`](docs/evidencias/actividad8/contenedor/):
+`ejecucion_contenedor.txt` (build, `docker ps`, usuario, `curl` de `/health`, `/predict`, 422 y `/docs`),
+`logs_contenedor.txt`, `respuesta_predict.json` y `pytest_e2e.txt`.
+
+![Contenedor en ejecución respondiendo a /predict](docs/evidencias/actividad8/contenedor_prediccion.png)
+
+### PR de la entrega de serving
+
+| Contribución | Responsable | Revisión |
+|---|---|---|
+| [PR #15](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/15): champion, contrato y loader de MLflow | CH1 - Cristhian | Revisó LH3 |
+| [PR #16](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/16): FastAPI, esquemas Pydantic y pruebas HTTP | LH3 - Luis | Revisa HH2 |
+| [PR #17](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/17): Containerfile y dependencias de serving | HH2 - Horacio | Revisó DH4 |
+| PR de la rama `docs/serving-e2e-readme`: prueba E2E, README y evidencias | DH4 - Derick | Revisa CH1 |
 
 ## Pruebas y estilo
 

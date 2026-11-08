@@ -1,0 +1,63 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Containerfile
+#1 transferring dockerfile: 705B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.13-slim
+#2 DONE 0.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 304B done
+#3 DONE 0.0s
+
+#4 [1/9] FROM docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
+#4 resolve docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 5.66kB done
+#5 DONE 0.0s
+
+#6 [4/9] RUN pip install --no-cache-dir -r requirements-serving.txt
+#6 CACHED
+
+#7 [3/9] COPY requirements-serving.txt ./
+#7 CACHED
+
+#8 [2/9] WORKDIR /app
+#8 CACHED
+
+#9 [6/9] COPY mibici/ ./mibici/
+#9 CACHED
+
+#10 [7/9] RUN pip install --no-cache-dir --no-deps .
+#10 CACHED
+
+#11 [8/9] COPY model_bundle/ ./model_bundle/
+#11 CACHED
+
+#12 [5/9] COPY pyproject.toml README.md LICENSE ./
+#12 CACHED
+
+#13 [9/9] RUN groupadd --system appgroup &&     useradd --system --gid appgroup --home-dir /app --no-create-home appuser &&     chown -R appuser:appgroup /app
+#13 CACHED
+
+#14 exporting to image
+#14 exporting layers done
+#14 exporting manifest sha256:41ee975595f8449639ff4ece352e81351004451217b6477ca980d80dd7e682d6 done
+#14 exporting config sha256:eb327231024e45f8408d9275cb8084362f0fa91b404198c71c2482c466414e77 done
+#14 exporting attestation manifest sha256:e99d0f26b14de9f3ab857c89b97afe9c3c2dcda1db5194dcdd6497b2a603a6a8 done
+#14 exporting manifest list sha256:73ff38eff53cfaeb8edb82a9cfc869d676b75f1c8c07151b8fc91af86824b9a5 done
+#14 naming to docker.io/library/mibici-api:actividad8 done
+#14 unpacking to docker.io/library/mibici-api:actividad8 done
+#14 DONE 0.0s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/wnp6q7rrq0nn9ktzc6aekb0n9
+c6aee5d19071bd6309d5f382a660bc356f09d3ef918315c2933633ecd0901ea3
+Respuesta de GET /health:
+{"estado":"listo","modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"f0b724d2f67c48c8a2164d551269c1b6"}}
+Respuesta de POST /predict con el ejemplo real de P1:
+{"predicciones":[40.697957479000046,276.77983750628846],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"f0b724d2f67c48c8a2164d551269c1b6"}}
+...........                                                              [100%]
+11 passed in 0.09s
