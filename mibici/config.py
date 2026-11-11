@@ -230,3 +230,26 @@ MODEL_PATH = Path(os.getenv("MODEL_PATH", str(PROJ_ROOT / "model_bundle")))
 METADATOS_MODELO = "modelo_servido.json"  # linaje de la copia, junto al MLmodel
 # Petición de ejemplo con registros reales del conjunto de prueba (contrato en docs/serving/)
 EJEMPLO_SERVICIO = PROJ_ROOT / "docs" / "serving" / "ejemplo_entrada_p1.json"
+
+# Entregable 8: monitoreo de drift y A/B testing (mibici/monitoring). Modelo: champion de P1.
+# Tres ventanas sin traslape, en orden temporal (ver docs/monitoring/contrato_datasets.md):
+# - referencia: datos con los que se entrenó el champion (train de P1);
+# - reciente: periodo posterior al entrenamiento que ya tiene etiquetas (val + test); el
+#   challenger puede reentrenarse con él;
+# - actual: mes nuevo, publicado después del entrenamiento, que hace de "producción". Se usa para
+#   el drift contra la referencia y como conjunto de evaluación común del A/B; nadie entrena ni
+#   elige hiperparámetros con él.
+PERIODOS_MONITOREO = {
+    "referencia": (FECHA_INICIO, "2026-03-31"),
+    "reciente": (INICIO_VALIDACION, FECHA_FIN),
+    "actual": ("2026-10-01", "2026-10-31"),
+}
+# Meses del periodo actual y catálogo vigente en ese momento (consultados el 2026-11-10). Viven
+# fuera de VIAJES_DIR porque P2 y P3 leen todos los archivos de esa carpeta.
+URLS_VIAJES_MONITOREO = {"2026_10": f"{URL_BASE_MIBICI}/133188/datos_abiertos_2026_10.csv"}
+URL_NOMENCLATURA_MONITOREO = f"{URL_BASE_MIBICI}/1118/nomenclatura_2026_10.csv"
+MONITOREO_DIR = PROCESSED_DATA_DIR / "monitoreo"
+VIAJES_MONITOREO_DIR = MONITOREO_DIR / "viajes"
+ESTACIONES_MONITOREO_PARQUET = MONITOREO_DIR / "estaciones_2026_10.parquet"
+# Manifiesto versionado en Git: periodos, archivos con SHA-256, tamaños y huella de cada conjunto
+MANIFIESTO_MONITOREO = REFERENCES_DIR / "manifiesto_monitoreo.json"
