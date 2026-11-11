@@ -1,0 +1,9 @@
+$ make monitoring-drift   # python -m mibici.monitoring.evidently_report (evidently 0.7.23)
+2026-11-10 23:07:17.531 | INFO     | mibici.config:<module>:17 - PROJ_ROOT path is: .
+2026-11-10 23:07:19.020 | INFO     | __main__:generar:502 - referencia_vs_actual: 201,267 filas de referencia y 14,547 actuales
+2026-11-10 23:07:21.371 | INFO     | __main__:generar:502 - referencia_vs_reciente: 201,267 filas de referencia y 76,947 actuales
+2026-11-10 23:07:23.154 | INFO     | __main__:generar:502 - referencia_vs_actual_estaciones_conocidas: 201,267 filas de referencia y 11,470 actuales
+2026-11-10 23:07:25.043 | INFO     | __main__:main:562 - referencia_vs_actual: 7 de 11 variables con drift (64%); drift del conjunto: True; objetivo: 0.298; orden: dia_anio, mes, demanda_lag_1, demanda_media_7, demanda_lag_7, longitud, capacidad
+2026-11-10 23:07:25.043 | INFO     | __main__:main:562 - referencia_vs_reciente: 5 de 11 variables con drift (45%); drift del conjunto: False; objetivo: 0.117; orden: mes, dia_anio, demanda_media_7, demanda_lag_7, demanda_lag_1
+2026-11-10 23:07:25.043 | INFO     | __main__:main:562 - referencia_vs_actual_estaciones_conocidas: 5 de 11 variables con drift (45%); drift del conjunto: False; objetivo: 0.501; orden: dia_anio, mes, demanda_media_7, demanda_lag_1, demanda_lag_7
+2026-11-10 23:07:25.043 | SUCCESS  | __main__:main:569 - Evidencia escrita en ./docs/evidencias/drift
