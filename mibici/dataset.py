@@ -127,8 +127,13 @@ def procesar_viajes(ruta_csv: Path, ruta_parquet: Path):
     return len(df)
 
 
-def procesar_estaciones(ruta_csv: Path):
-    """Prepara el catálogo de estaciones de MiBici."""
+def procesar_estaciones(ruta_csv: Path, destino: Path | None = None):
+    """Prepara el catálogo de estaciones de MiBici.
+
+    Por defecto escribe el catálogo del entrenamiento; el monitoreo pasa otro `destino` para
+    conservar aparte el catálogo vigente en el periodo actual.
+    """
+    destino = ESTACIONES_PARQUET if destino is None else destino
 
     df = leer_csv(ruta_csv)
 
@@ -182,8 +187,8 @@ def procesar_estaciones(ruta_csv: Path):
         ]
     ]
 
-    ESTACIONES_PARQUET.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(ESTACIONES_PARQUET, index=False)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(destino, index=False)
 
     logger.info(f"Estaciones procesadas: {len(df)}")
     return len(df)

@@ -43,15 +43,21 @@ VARIABLES = [
 VARIABLES_V2 = [*VARIABLES, "demanda_media_28"]
 
 
-def construir_conjuntos(datos, estaciones):
-    """Une capacidad y ubicación a la demanda diaria y aplica la partición temporal de config.py."""
-    datos = datos.merge(
+def unir_estaciones(datos, estaciones):
+    """Une a cada fila de demanda la capacidad y la ubicación de su estación (variables de P1)."""
+    return datos.merge(
         estaciones[["estacion_id", "capacidad", "latitud", "longitud"]],
         on="estacion_id",
         how="left",
         validate="many_to_one",
     )
-    return dict(zip(("train", "val", "test"), particion_temporal(datos)))
+
+
+def construir_conjuntos(datos, estaciones):
+    """Une capacidad y ubicación a la demanda diaria y aplica la partición temporal de config.py."""
+    return dict(
+        zip(("train", "val", "test"), particion_temporal(unir_estaciones(datos, estaciones)))
+    )
 
 
 def preparar_conjuntos():

@@ -9,6 +9,18 @@ pública del Área Metropolitana de Guadalajara. Este repositorio es la base rep
 integrador de TC5061: ingesta versionada, variables sin fuga del futuro y un **MLflow Project** que
 entrena, compara y lleva a producción un modelo por pregunta mediante el Model Registry.
 
+## Contenido
+
+| Tema | Secciones |
+|---|---|
+| **Proyecto** | [Preguntas](#preguntas) · [Datos](#datos) · [Estructura del repositorio](#estructura-del-repositorio) · [Integrantes y roles](#integrantes-y-roles) · [Propuesta académica](#propuesta-académica) |
+| **Puesta en marcha** | [Instalación](#instalación) · [Reproducir con el MLflow Project](#reproducir-con-el-mlflow-project) · [macOS: puerto 5000 ocupado por AirPlay](#macos-puerto-5000-ocupado-por-airplay) |
+| **Experimentación y Model Registry** (entrega 2) | [Qué registra cada corrida](#qué-registra-cada-corrida) · [Esquema del Model Registry: aliases](#esquema-del-model-registry-aliases) · [Modelo en producción de cada pregunta](#modelo-en-producción-de-cada-pregunta) · [P3: variables, métricas y regla de selección](#p3-variables-métricas-y-regla-de-selección) |
+| **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
+| **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
+| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) |
+| **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
+
 ## Preguntas
 
 | | Pregunta | Tipo | Granularidad y horizonte | Usuario |
@@ -24,6 +36,8 @@ etiqueta `sin_bicicletas` si `salidas − llegadas ≥ α · capacidad` y `sin_a
 Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 [`references/ml-canvas.md`](references/ml-canvas.md) y [`references/arquitectura.md`](references/arquitectura.md).
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Datos
 
 - **Fuente:** [datos abiertos de MiBici](https://mibici.net/es/datos-abiertos/) (viajes mensuales y
@@ -38,6 +52,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
   SHA-256 y el número de filas de cada CSV; cada run de MLflow registra los primeros 12 caracteres del hash
   de ese manifiesto como `version_datos`.
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Estructura del repositorio
 
 ```
@@ -50,6 +66,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── model_bundle/          <- copia del champion exportada con make export-model (fuera de Git)
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
 ├── docs/                  <- auditoría, contrato de serving (serving/) y evidencias
+│   ├── monitoring/        <- contrato de los conjuntos de drift y A/B (Entregable 8)
 │   └── evidencias/
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
 │       ├── deepchecks/    <- validación de datos
@@ -58,6 +75,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
+│   └── manifiesto_monitoreo.json <- ventanas, archivos y huellas del monitoreo (Entregable 8)
 ├── reports/figures/       <- copia local de las gráficas (fuera de Git, salvo .gitkeep)
 ├── requirements.txt       <- dependencias con versión fija
 ├── requirements-dev.txt   <- herramientas de pruebas, calidad y seguridad
@@ -72,6 +90,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
     ├── serving/           <- model_loader.py, exportar.py (champion -> model_bundle), api.py y schemas.py
+    ├── monitoring/        <- datasets.py: ventanas de referencia, reciente y actual para drift y A/B
     ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
     ├── plots.py           <- figuras que se registran como artefactos
     └── modeling/
@@ -84,6 +103,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
         ├── registro.py    <- entrada register: Model Registry con aliases champion/challenger
         └── predict.py     <- entrada predict: usa models:/<nombre>@champion
 ```
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
 
 ## Instalación
 
@@ -103,6 +124,8 @@ cp .env.example .env              # Windows: copy .env.example .env
 El entorno activado solo se usa para lanzar `mlflow run` y el servidor; cada corrida se ejecuta en el
 entorno que `mlflow run --env-manager uv` crea a partir de `python_env.yaml` (mismas versiones fijas).
 `.env` solo contiene la URI de MLflow y nunca se sube a Git.
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
 
 ## Reproducir con el MLflow Project
 
@@ -265,6 +288,8 @@ make mlflow MLFLOW_PORT=5001
 export MLFLOW_TRACKING_URI=http://127.0.0.1:5001   # o: make train MLFLOW_PORT=5001 ...
 ```
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Qué registra cada corrida
 
 Cada corrida se abre con `mibici.tracking.iniciar_run()` (bajo `mlflow run` reanuda la corrida que crea
@@ -296,6 +321,8 @@ métricas de entrenamiento y validación; la padre registra la mejor combinació
 evaluación en prueba, sus artefactos y su modelo. La partición temporal es la misma de la entrega anterior,
 así que toda corrida es comparable con su baseline.
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Esquema del Model Registry: aliases
 
 Usamos **aliases** y no etapas (*stages*). Las etapas `Staging`/`Production` están obsoletas desde
@@ -324,6 +351,8 @@ modelo = mlflow.pyfunc.load_model("models:/mibici-equipo16-p1-demanda@champion")
 
 Los modelos de scikit-learn se guardan con el formato seguro `skops`; solo se declaran como confiables los
 tipos de scikit-learn, numpy y del paquete `mibici`.
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
 
 ## Servicio de inferencia: API REST en contenedor
 
@@ -499,6 +528,46 @@ Salidas reales en [`docs/evidencias/actividad8/contenedor/`](docs/evidencias/act
 | [PR #17](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/17): Containerfile y dependencias de serving | HH2 - Horacio | Revisó DH4 |
 | PR de la rama `docs/serving-e2e-readme`: prueba E2E, README y evidencias | DH4 - Derick | Revisa CH1 |
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## Monitoreo de drift y A/B testing
+
+Capa de observabilidad del Entregable 8 sobre el champion de P1 (`mibici-equipo16-p1-demanda`,
+versión 2 en el registry del equipo). Compara los datos con los que se entrenó el modelo contra un
+mes posterior y prepara una evaluación común para comparar dos versiones del modelo. El contrato
+completo, con los motivos de cada ventana y las reglas sin fuga, está en
+[`docs/monitoring/contrato_datasets.md`](docs/monitoring/contrato_datasets.md).
+
+### Ventanas de referencia, reciente y actual
+
+| Ventana | Fechas | Filas (estación × día) | Uso |
+|---|---|---|---|
+| `referencia` | oct-2024 a mar-2026 | 201,267 | Train del champion; base del drift |
+| `reciente` | abr a sep-2026 | 76,947 | Validación y prueba originales; el challenger puede entrenar con ellas |
+| `actual` | oct-2026 | 14,547 | Mes publicado después del entrenamiento: drift y evaluación común del A/B |
+
+Las ventanas no se traslapan y la referencia es exactamente el train del champion (lo verifican
+`validar_periodos` y las pruebas de `tests/test_drift_datasets.py`). El challenger solo usa datos
+anteriores al 1 de octubre de 2026 y ambas versiones se evalúan sobre las mismas filas de octubre.
+La ventana actual usa el catálogo de estaciones vigente (`nomenclatura_2026_10.csv`); entre mayo y
+agosto de 2026 empezaron a operar 99 estaciones que el champion no vio.
+
+### Preparar los conjuntos
+
+```bash
+make mlflow MLFLOW_PORT=5001                    # en otra terminal, para anotar la versión del champion
+make monitoring-data MLFLOW_PORT=5001           # o: python -m mibici.monitoring.datasets [--sin-registry]
+```
+
+Requiere los datos de entrenamiento procesados (`make data`). Descarga octubre de 2026 y su
+catálogo, guarda `referencia.parquet`, `reciente.parquet` y `actual.parquet` en
+`data/processed/monitoreo/` (fuera de Git) y escribe
+[`references/manifiesto_monitoreo.json`](references/manifiesto_monitoreo.json) con las fechas, el
+SHA-256 de los archivos, la versión del champion, la calidad del mes actual y una huella de cada
+conjunto. Volver a ejecutarlo produce las mismas huellas.
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Pruebas y estilo
 
 Desde la raíz, con Python 3.13 y las dependencias de desarrollo instaladas:
@@ -578,6 +647,8 @@ Las de calidad de datos están en `docs/evidencias/deepchecks/` y las de segurid
 | [PR #12](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/12) | HH2 - Horacio | Revisó DH4 |
 | [PR de esta rama: `test/modelos-documentacion`](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pulls) | DH4 - Derick | Revisa CH1 |
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Reproducibilidad y buenas prácticas del equipo
 
 - Rutas, fechas, semillas, URLs y parámetros solo en `mibici/config.py`; los demás módulos los importan.
@@ -588,6 +659,8 @@ Las de calidad de datos están en `docs/evidencias/deepchecks/` y las de segurid
 - Nunca se suben datos, modelos serializados, `mlruns/`, `mlartifacts/`, `mlflow.db` ni `.env`;
   el `.gitignore` los excluye.
 - Cada función pública tiene docstring y pruebas con datos sintéticos.
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
 
 ## Integrantes y roles
 
@@ -601,6 +674,8 @@ Las de calidad de datos están en `docs/evidencias/deepchecks/` y las de segurid
 Trabajamos en cadena: cada integrante revisa el PR anterior y construye su parte encima
 (CH1 → LH3 → HH2 → DH4 → cierre de CH1). Las tareas y los contratos entre módulos están en
 [`references/plan-de-implementacion.md`](references/plan-de-implementacion.md).
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
 
 ## Flujo de trabajo en Git
 
@@ -650,9 +725,13 @@ convierte en el commit final en `main`.
 - Cada integrante abre al menos un PR y revisa al menos un PR de otro integrante.
 - Nadie aprueba ni integra su propio PR.
 
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
 ## Propuesta académica
 
 La propuesta de la primera entrega (ML Canvas, preguntas, datos, arquitectura, modelos y experimento base)
 parte de los documentos de [`references/`](references/). El documento final en Word/PDF se entrega en Canvas
 y no se versiona en este repositorio. La auditoría contra la rúbrica está en
 [`docs/auditoria-final.md`](docs/auditoria-final.md).
+
+<sub>[↑ Volver al contenido](#contenido)</sub>

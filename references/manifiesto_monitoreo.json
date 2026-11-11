@@ -1,0 +1,206 @@
+{
+  "fuente": "https://mibici.net/es/datos-abiertos/",
+  "pregunta": "p1",
+  "granularidad": "estación × día",
+  "modelo": {
+    "nombre": "mibici-equipo16-p1-demanda",
+    "alias": "champion",
+    "version": "2",
+    "uri_version": "models:/mibici-equipo16-p1-demanda/2",
+    "run_id": "47933c5b0df749edaeb159289053f70e",
+    "version_datos": "4d8c2a1292fc"
+  },
+  "version_datos_entrenamiento": "4d8c2a1292fc",
+  "semilla": 16,
+  "periodos": {
+    "referencia": [
+      "2024-10-01",
+      "2026-03-31"
+    ],
+    "reciente": [
+      "2026-04-01",
+      "2026-09-30"
+    ],
+    "actual": [
+      "2026-10-01",
+      "2026-10-31"
+    ]
+  },
+  "reglas_sin_fuga": [
+    "Las tres ventanas son consecutivas y no se traslapan: referencia < reciente < actual.",
+    "La referencia es exactamente el train del champion (mismos cortes y mismo catálogo).",
+    "El challenger solo puede entrenar o elegir hiperparámetros con fechas anteriores al inicio de la ventana actual (referencia + reciente).",
+    "La ventana actual es la evaluación común del A/B: ambos modelos predicen las mismas filas.",
+    "Los rezagos de la ventana actual usan solo días anteriores a la fecha de cada fila; el 1 de octubre toma la demanda del 30 de septiembre, que ya era conocida.",
+    "El A/B fija versiones numéricas del registry; los aliases no se mueven antes de decidir."
+  ],
+  "columnas": {
+    "id": [
+      "estacion_id",
+      "fecha"
+    ],
+    "variables": [
+      "dia_semana",
+      "mes",
+      "es_fin_semana",
+      "dia_anio",
+      "es_festivo",
+      "demanda_lag_1",
+      "demanda_lag_7",
+      "demanda_media_7",
+      "capacidad",
+      "latitud",
+      "longitud"
+    ],
+    "categoricas": [
+      "dia_semana",
+      "mes",
+      "es_fin_semana",
+      "es_festivo"
+    ],
+    "numericas": [
+      "dia_anio",
+      "demanda_lag_1",
+      "demanda_lag_7",
+      "demanda_media_7",
+      "capacidad",
+      "latitud",
+      "longitud"
+    ],
+    "objetivo": "demanda"
+  },
+  "conjuntos": {
+    "referencia": {
+      "inicio": "2024-10-01",
+      "fin": "2026-03-31",
+      "dias": 547,
+      "filas": 201267,
+      "estaciones": 371,
+      "demanda_media": 33.4671,
+      "nulos": {
+        "demanda_lag_1": 359,
+        "demanda_lag_7": 2519,
+        "demanda_media_7": 2519
+      },
+      "catalogo": "nomenclatura_2026_09.csv",
+      "huella": "827ffa8b5727"
+    },
+    "reciente": {
+      "inicio": "2026-04-01",
+      "fin": "2026-09-30",
+      "dias": 183,
+      "filas": 76947,
+      "estaciones": 470,
+      "demanda_media": 29.7539,
+      "nulos": {},
+      "catalogo": "nomenclatura_2026_09.csv",
+      "huella": "4f52f6556fe4"
+    },
+    "actual": {
+      "inicio": "2026-10-01",
+      "fin": "2026-10-31",
+      "dias": 31,
+      "filas": 14547,
+      "estaciones": 470,
+      "demanda_media": 43.6748,
+      "nulos": {},
+      "catalogo": "nomenclatura_2026_10.csv",
+      "huella": "b511db2054b2"
+    }
+  },
+  "archivos_actual": {
+    "datos_abiertos_2026_10.csv": {
+      "url": "https://mibici.net/site/assets/files/133188/datos_abiertos_2026_10.csv",
+      "sha256": "0cdfb05299e6db658ac9cc7723494a9704b0749e3671c29c8566826ea889b900"
+    },
+    "nomenclatura_2026_10.csv": {
+      "url": "https://mibici.net/site/assets/files/1118/nomenclatura_2026_10.csv",
+      "sha256": "2da38dd60dcc74ccb95eb8ed1572e107cf5af44dfa6c5a4fbfa4e30f94ef7f3e"
+    }
+  },
+  "calidad_actual": {
+    "viajes": 635532,
+    "filas_duplicadas": 0,
+    "fuera_de_catalogo": 1,
+    "duracion_invalida": 193,
+    "viajes_limpios": 635338
+  },
+  "cambios_catalogo": {
+    "estaciones_anterior": 484,
+    "estaciones_vigente": 470,
+    "altas": [],
+    "bajas": [
+      22,
+      97,
+      99,
+      109,
+      113,
+      114,
+      116,
+      138,
+      147,
+      149,
+      223,
+      240,
+      250,
+      310
+    ],
+    "cambios_capacidad": [
+      {
+        "estacion_id": 32,
+        "antes": 19,
+        "ahora": 18
+      },
+      {
+        "estacion_id": 139,
+        "antes": 15,
+        "ahora": 19
+      },
+      {
+        "estacion_id": 265,
+        "antes": 30,
+        "ahora": 15
+      },
+      {
+        "estacion_id": 350,
+        "antes": 23,
+        "ahora": 22
+      },
+      {
+        "estacion_id": 366,
+        "antes": 15,
+        "ahora": 14
+      },
+      {
+        "estacion_id": 374,
+        "antes": 15,
+        "ahora": 14
+      },
+      {
+        "estacion_id": 459,
+        "antes": 19,
+        "ahora": 15
+      },
+      {
+        "estacion_id": 492,
+        "antes": 19,
+        "ahora": 15
+      },
+      {
+        "estacion_id": 503,
+        "antes": 19,
+        "ahora": 18
+      },
+      {
+        "estacion_id": 509,
+        "antes": 15,
+        "ahora": 14
+      },
+      {
+        "estacion_id": 514,
+        "antes": 19,
+        "ahora": 18
+      }
+    ]
+  }
+}

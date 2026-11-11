@@ -135,7 +135,7 @@ def demanda_diaria(
 
 
 def consolidar_demanda_diaria(
-    directorio_viajes: Path,
+    directorio_viajes: Path | list[Path],
     estaciones: pd.DataFrame,
     fecha_inicio: str,
     fecha_fin: str,
@@ -145,11 +145,18 @@ def consolidar_demanda_diaria(
 
     Limpia los viajes por mes y construye un calendario
     continuo por estación, incluyendo días con demanda cero.
+    Acepta una carpeta (todos sus viajes_*.parquet) o una lista
+    de archivos, por ejemplo historial más un mes de monitoreo.
     """
+
+    if isinstance(directorio_viajes, Path):
+        archivos = sorted(directorio_viajes.glob("viajes_*.parquet"))
+    else:
+        archivos = sorted(directorio_viajes)
 
     resumenes = []
 
-    for archivo in sorted(directorio_viajes.glob("viajes_*.parquet")):
+    for archivo in archivos:
         viajes = pd.read_parquet(archivo)
         limpios = limpiar_viajes(viajes, estaciones)
 
@@ -383,7 +390,7 @@ def agregar_media_movil_28(
 
 
 def preparar_datos_p1(
-    directorio_viajes: Path,
+    directorio_viajes: Path | list[Path],
     estaciones: pd.DataFrame,
     fecha_inicio: str,
     fecha_fin: str,

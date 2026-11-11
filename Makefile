@@ -119,6 +119,11 @@ compare:
 export-model:
 	$(PYTHON_INTERPRETER) -m mibici.serving.exportar
 
+## Conjuntos de monitoreo de P1 (referencia, reciente y actual) y su manifiesto
+.PHONY: monitoring-data
+monitoring-data:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.datasets
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
