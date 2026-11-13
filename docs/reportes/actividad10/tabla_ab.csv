@@ -1,0 +1,3 @@
+modelo,version_mlflow,run_id,ventana_train,ventana_evaluacion,n,mae,rmse,desviacion_poisson,sesgo,mae_relativo_pct,delta_mae_vs_a,delta_mae_vs_a_pct,delta_rmse_vs_a_pct
+A · champion,2,86cc548d36e64f418d45ca053f11312a,2024-10-01/2026-03-31,2026-10-01/2026-10-31,14547,8.1216,17.4995,3.2266,-1.5823,18.5955,0.0000,0.0000,0.0000
+B · challenger,3,658257aa8f534d04acdb3762fbe4a6b0,2024-10-01/2026-09-30,2026-10-01/2026-10-31,14547,8.0180,16.8518,3.1284,-1.3340,18.3585,-0.1035,-1.2747,-3.7015

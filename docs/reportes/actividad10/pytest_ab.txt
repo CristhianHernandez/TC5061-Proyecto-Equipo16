@@ -1,0 +1,33 @@
+$ python -m pytest tests/test_ab_compare.py tests/test_challenger_p1.py -v
+tests/test_ab_compare.py::test_metricas_de_un_caso_conocido PASSED
+tests/test_ab_compare.py::test_desviacion_poisson_coincide_con_scikit_learn PASSED
+tests/test_ab_compare.py::test_diferencia_negativa_indica_que_b_tiene_menos_error PASSED
+tests/test_ab_compare.py::test_segmentos_separan_estaciones_nuevas_y_demanda_alta PASSED
+tests/test_ab_compare.py::test_tabla_diaria_tiene_un_renglon_por_dia_y_promedia_errores PASSED
+tests/test_ab_compare.py::test_bootstrap_detecta_una_mejora_consistente PASSED
+tests/test_ab_compare.py::test_bootstrap_es_reproducible_con_la_misma_semilla PASSED
+tests/test_ab_compare.py::test_bootstrap_incluye_el_cero_si_los_modelos_son_equivalentes PASSED
+tests/test_ab_compare.py::test_comparar_exige_las_mismas_filas_para_a_y_b PASSED
+tests/test_ab_compare.py::test_comparar_promueve_un_challenger_claramente_mejor PASSED
+tests/test_ab_compare.py::test_decision_conserva_champion_si_b_empeora PASSED
+tests/test_ab_compare.py::test_decision_pide_mas_datos_si_el_intervalo_incluye_cero PASSED
+tests/test_ab_compare.py::test_decision_no_promueve_si_un_segmento_empeora_mas_de_la_tolerancia PASSED
+tests/test_ab_compare.py::test_decision_no_promueve_si_el_rmse_empeora PASSED
+tests/test_ab_compare.py::test_la_degradacion_se_mide_con_el_mae_relativo PASSED
+tests/test_ab_compare.py::test_politica_reentrena_con_cambio_de_demanda_e_impacto PASSED
+tests/test_ab_compare.py::test_politica_no_entrena_con_datos_corruptos PASSED
+tests/test_ab_compare.py::test_politica_solo_investiga_drift_sin_impacto PASSED
+tests/test_ab_compare.py::test_politica_sigue_monitoreando_sin_senales PASSED
+tests/test_ab_compare.py::test_resolver_version_fija_el_numero_de_un_alias PASSED
+tests/test_ab_compare.py::test_predecir_rechaza_valores_no_finitos PASSED
+tests/test_ab_compare.py::test_predecir_usa_solo_las_variables_de_la_firma PASSED
+tests/test_ab_compare.py::test_guardar_escribe_tablas_graficas_y_resumen_sin_fecha PASSED
+tests/test_challenger_p1.py::test_la_receta_es_la_del_champion_version_2 PASSED
+tests/test_challenger_p1.py::test_partir_reciente_separa_abr_jun_de_jul_sep PASSED
+tests/test_challenger_p1.py::test_entrenar_usa_referencia_y_reciente_pero_nunca_octubre PASSED
+tests/test_challenger_p1.py::test_entrenar_falla_si_la_ventana_reciente_se_traslapa_con_la_evaluacion PASSED
+tests/test_challenger_p1.py::test_entrenar_es_determinista PASSED
+tests/test_challenger_p1.py::test_registrar_crea_challenger_sin_mover_el_champion PASSED
+tests/test_challenger_p1.py::test_registrar_falla_si_el_champion_cambia PASSED
+tests/test_challenger_p1.py::test_registrar_rechaza_una_version_igual_al_champion PASSED
+============================== 31 passed in 4.01s ==============================

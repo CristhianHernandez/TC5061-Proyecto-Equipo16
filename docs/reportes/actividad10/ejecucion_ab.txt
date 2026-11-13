@@ -1,0 +1,13 @@
+$ make monitoring-challenger   # python -m mibici.monitoring.challenger_p1
+Registered model 'mibici-equipo16-p1-demanda' already exists. Creating a new version of this model...
+2026/11/13 17:33:33 INFO mlflow.store.model_registry.abstract_store: Waiting up to 300 seconds for model version to finish creation. Model name: mibici-equipo16-p1-demanda, version 3
+Created version '3' of model 'mibici-equipo16-p1-demanda'.
+2026-11-13 17:33:28.131 | INFO     | __main__:main:193 - Verificación previa jul–sep 2026: MAE champion 5.7948 → reentrenado 5.7614 (+0.58 %)
+2026-11-13 17:33:28.310 | INFO     | mibici.tracking:iniciar_run:155 - Run 'p1-hgb-challenger-reentrenado-abr-sep-2026' (P1) iniciado: 658257aa8f534d04acdb3762fbe4a6b0
+2026-11-13 17:33:33.132 | SUCCESS  | __main__:main:202 - mibici-equipo16-p1-demanda: champion v2 conservado; challenger v3 (corrida 658257aa8f534d04acdb3762fbe4a6b0)
+
+$ make monitoring-ab   # python -m mibici.monitoring.ab_compare
+2026-11-13 17:40:58.264 | INFO     | __main__:generar:729 - A = v2 (champion), B = v3 (challenger)
+2026-11-13 17:40:59.275 | INFO     | mibici.tracking:iniciar_run:155 - Run 'p1-ab-champion-vs-challenger-oct-2026' (P1) iniciado: f3d1eb6cf45647b795820197548e98a9
+2026-11-13 17:40:59.297 | INFO     | __main__:main:762 - MAE A 8.1216 | B 8.0180 | ΔMAE -0.1035 [-0.1552, -0.0544] | P(B mejor) 1.000
+2026-11-13 17:40:59.297 | SUCCESS  | __main__:main:771 - Decisión: promover_challenger — evidencia en ./docs/reportes/actividad10
