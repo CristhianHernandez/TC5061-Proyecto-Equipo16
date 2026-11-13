@@ -129,6 +129,16 @@ monitoring-data:
 monitoring-drift:
 	$(PYTHON_INTERPRETER) -m mibici.monitoring.evidently_report
 
+## Challenger de P1: el champion reentrenado con referencia + reciente (alias challenger)
+.PHONY: monitoring-challenger
+monitoring-challenger:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.challenger_p1
+
+## A/B offline de P1 (champion vs challenger en oct-2026) en docs/reportes/actividad10/
+.PHONY: monitoring-ab
+monitoring-ab:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.ab_compare
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
