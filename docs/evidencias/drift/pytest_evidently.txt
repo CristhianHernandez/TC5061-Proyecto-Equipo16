@@ -1,0 +1,24 @@
+$ python -m pytest tests/test_evidently_report.py -v
+============================= test session starts ==============================
+platform darwin -- Python 3.13.9, pytest-9.1.1, pluggy-1.7.0 -- ./.venv/bin/python
+cachedir: .pytest_cache
+rootdir: .
+configfile: pytest.ini
+plugins: platformdirs-4.14.5, Faker-40.54.0, anyio-4.16.0
+collecting ... collected 13 items
+
+tests/test_evidently_report.py::test_sin_drift_no_marca_variables PASSED [  7%]
+tests/test_evidently_report.py::test_drift_intencional_se_detecta_solo_en_las_columnas_alteradas PASSED [ 15%]
+tests/test_evidently_report.py::test_el_conteo_de_la_tabla_coincide_con_evidently PASSED [ 23%]
+tests/test_evidently_report.py::test_identificadores_fuera_y_objetivo_aparte PASSED [ 30%]
+tests/test_evidently_report.py::test_metodos_fijos_aun_con_pocas_filas PASSED [ 38%]
+tests/test_evidently_report.py::test_esquema_incompleto_o_con_tipos_invalidos_falla PASSED [ 46%]
+tests/test_evidently_report.py::test_fuera_de_referencia_por_rango_y_por_categoria PASSED [ 53%]
+tests/test_evidently_report.py::test_calidad_detecta_duplicados_nulos_constantes_y_tipos PASSED [ 61%]
+tests/test_evidently_report.py::test_estaciones_nuevas_y_comparacion_solo_con_estaciones_conocidas PASSED [ 69%]
+tests/test_evidently_report.py::test_demanda_mismo_mes_compara_contra_anios_previos PASSED [ 76%]
+tests/test_evidently_report.py::test_variables_a_graficar_omite_calendario_y_objetivo PASSED [ 84%]
+tests/test_evidently_report.py::test_generar_escribe_html_tablas_y_graficas PASSED [ 92%]
+tests/test_evidently_report.py::test_generar_es_reproducible PASSED      [100%]
+
+============================== 13 passed in 6.96s ==============================

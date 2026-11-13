@@ -1,0 +1,237 @@
+{
+  "configuracion": {
+    "metodo_numerico": "wasserstein",
+    "metodo_categorico": "jensenshannon",
+    "umbral": 0.1,
+    "proporcion_drift_conjunto": 0.5,
+    "variables": [
+      "dia_semana",
+      "mes",
+      "es_fin_semana",
+      "dia_anio",
+      "es_festivo",
+      "demanda_lag_1",
+      "demanda_lag_7",
+      "demanda_media_7",
+      "capacidad",
+      "latitud",
+      "longitud"
+    ],
+    "categoricas": [
+      "dia_semana",
+      "mes",
+      "es_fin_semana",
+      "es_festivo"
+    ],
+    "numericas": [
+      "dia_anio",
+      "demanda_lag_1",
+      "demanda_lag_7",
+      "demanda_media_7",
+      "capacidad",
+      "latitud",
+      "longitud"
+    ],
+    "objetivo": "demanda",
+    "excluidas": [
+      "estacion_id",
+      "fecha"
+    ]
+  },
+  "periodos": {
+    "referencia": [
+      "2024-10-01",
+      "2026-03-31"
+    ],
+    "reciente": [
+      "2026-04-01",
+      "2026-09-30"
+    ],
+    "actual": [
+      "2026-10-01",
+      "2026-10-31"
+    ]
+  },
+  "comparaciones": {
+    "referencia_vs_actual": {
+      "filas_referencia": 201267,
+      "filas_actual": 14547,
+      "variables_monitoreadas": 11,
+      "variables_con_drift": 7,
+      "proporcion_con_drift": 0.6364,
+      "drift_del_conjunto": true,
+      "variables_con_drift_por_puntaje": [
+        "dia_anio",
+        "mes",
+        "demanda_lag_1",
+        "demanda_media_7",
+        "demanda_lag_7",
+        "longitud",
+        "capacidad"
+      ],
+      "drift_por_grupo": {
+        "calendario": [
+          "dia_anio",
+          "mes"
+        ],
+        "estación": [
+          "capacidad",
+          "longitud"
+        ],
+        "historial de demanda": [
+          "demanda_lag_1",
+          "demanda_lag_7",
+          "demanda_media_7"
+        ]
+      },
+      "objetivo": {
+        "columna": "demanda",
+        "puntaje": 0.2981,
+        "drift": true,
+        "media_referencia": 33.4671,
+        "media_actual": 43.6748
+      }
+    },
+    "referencia_vs_reciente": {
+      "filas_referencia": 201267,
+      "filas_actual": 76947,
+      "variables_monitoreadas": 11,
+      "variables_con_drift": 5,
+      "proporcion_con_drift": 0.4545,
+      "drift_del_conjunto": false,
+      "variables_con_drift_por_puntaje": [
+        "mes",
+        "dia_anio",
+        "demanda_media_7",
+        "demanda_lag_7",
+        "demanda_lag_1"
+      ],
+      "drift_por_grupo": {
+        "calendario": [
+          "dia_anio",
+          "mes"
+        ],
+        "estación": [],
+        "historial de demanda": [
+          "demanda_lag_1",
+          "demanda_lag_7",
+          "demanda_media_7"
+        ]
+      },
+      "objetivo": {
+        "columna": "demanda",
+        "puntaje": 0.1165,
+        "drift": true,
+        "media_referencia": 33.4671,
+        "media_actual": 29.7539
+      }
+    },
+    "referencia_vs_actual_estaciones_conocidas": {
+      "filas_referencia": 201267,
+      "filas_actual": 11470,
+      "variables_monitoreadas": 11,
+      "variables_con_drift": 5,
+      "proporcion_con_drift": 0.4545,
+      "drift_del_conjunto": false,
+      "variables_con_drift_por_puntaje": [
+        "dia_anio",
+        "mes",
+        "demanda_media_7",
+        "demanda_lag_1",
+        "demanda_lag_7"
+      ],
+      "drift_por_grupo": {
+        "calendario": [
+          "dia_anio",
+          "mes"
+        ],
+        "estación": [],
+        "historial de demanda": [
+          "demanda_lag_1",
+          "demanda_lag_7",
+          "demanda_media_7"
+        ]
+      },
+      "objetivo": {
+        "columna": "demanda",
+        "puntaje": 0.5015,
+        "drift": true,
+        "media_referencia": 33.4671,
+        "media_actual": 50.639
+      }
+    }
+  },
+  "calidad": {
+    "referencia": {
+      "filas": 201267,
+      "estaciones": 371,
+      "columnas_faltantes": [],
+      "columnas_extra": [],
+      "filas_duplicadas": 0,
+      "claves_duplicadas": 0,
+      "nulos": {
+        "demanda_lag_1": 359,
+        "demanda_lag_7": 2519,
+        "demanda_media_7": 2519
+      },
+      "variables_constantes": [],
+      "demanda_negativa": 0
+    },
+    "reciente": {
+      "filas": 76947,
+      "estaciones": 470,
+      "columnas_faltantes": [],
+      "columnas_extra": [],
+      "filas_duplicadas": 0,
+      "claves_duplicadas": 0,
+      "nulos": {},
+      "variables_constantes": [],
+      "demanda_negativa": 0,
+      "tipos_distintos_a_referencia": {}
+    },
+    "actual": {
+      "filas": 14547,
+      "estaciones": 470,
+      "columnas_faltantes": [],
+      "columnas_extra": [],
+      "filas_duplicadas": 0,
+      "claves_duplicadas": 0,
+      "nulos": {},
+      "variables_constantes": [
+        "mes",
+        "es_festivo"
+      ],
+      "demanda_negativa": 0,
+      "tipos_distintos_a_referencia": {}
+    }
+  },
+  "estaciones_nuevas": {
+    "reciente": {
+      "estaciones_referencia": 371,
+      "estaciones_conocidas": 371,
+      "estaciones_nuevas": 99,
+      "filas_estaciones_nuevas_pct": 11.77,
+      "demanda_media_conocidas": 32.2904,
+      "demanda_media_nuevas": 10.7335
+    },
+    "actual": {
+      "estaciones_referencia": 371,
+      "estaciones_conocidas": 370,
+      "estaciones_nuevas": 100,
+      "filas_estaciones_nuevas_pct": 21.15,
+      "demanda_media_conocidas": 50.639,
+      "demanda_media_nuevas": 17.715
+    }
+  },
+  "estacionalidad_demanda": {
+    "meses": [
+      10
+    ],
+    "demanda_media_por_anio": {
+      "2024": 36.8273,
+      "2025": 36.6288,
+      "2026": 50.639
+    },
+    "cambio_vs_anios_previos_pct": 37.88
+  }
+}

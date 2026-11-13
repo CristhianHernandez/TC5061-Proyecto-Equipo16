@@ -18,7 +18,7 @@ entrena, compara y lleva a producción un modelo por pregunta mediante el Model 
 | **Experimentación y Model Registry** (entrega 2) | [Qué registra cada corrida](#qué-registra-cada-corrida) · [Esquema del Model Registry: aliases](#esquema-del-model-registry-aliases) · [Modelo en producción de cada pregunta](#modelo-en-producción-de-cada-pregunta) · [P3: variables, métricas y regla de selección](#p3-variables-métricas-y-regla-de-selección) |
 | **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
 | **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
-| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) |
+| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) |
 | **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
 
 ## Preguntas
@@ -71,7 +71,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
 │       ├── deepchecks/    <- validación de datos
 │       ├── seguridad/     <- auditoría de seguridad
-│       └── actividad8/    <- API y contenedor: salidas reales, prueba E2E y captura
+│       ├── actividad8/    <- API y contenedor: salidas reales, prueba E2E y captura
+│       └── drift/         <- Evidently: reportes HTML, tabla por variable, gráficas y análisis (Entregable 8)
 ├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
@@ -90,7 +91,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
     ├── serving/           <- model_loader.py, exportar.py (champion -> model_bundle), api.py y schemas.py
-    ├── monitoring/        <- datasets.py: ventanas de referencia, reciente y actual para drift y A/B
+    ├── monitoring/        <- datasets.py (ventanas para drift y A/B) y evidently_report.py (reporte de drift)
     ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
     ├── plots.py           <- figuras que se registran como artefactos
     └── modeling/
@@ -565,6 +566,31 @@ catálogo, guarda `referencia.parquet`, `reciente.parquet` y `actual.parquet` en
 [`references/manifiesto_monitoreo.json`](references/manifiesto_monitoreo.json) con las fechas, el
 SHA-256 de los archivos, la versión del champion, la calidad del mes actual y una huella de cada
 conjunto. Volver a ejecutarlo produce las mismas huellas.
+
+### Reporte de drift con Evidently
+
+```bash
+make monitoring-drift                           # o: python -m mibici.monitoring.evidently_report [--sin-html]
+```
+
+Usa `evidently==0.7.23` (en `requirements.txt`) sobre los conjuntos anteriores. Monitorea las 11
+variables de entrada del champion (los identificadores quedan fuera y la demanda se reporta aparte
+como drift del objetivo), con Wasserstein normalizada para numéricas, Jensen-Shannon para
+categóricas y umbral 0.1. Escribe en [`docs/evidencias/drift/`](docs/evidencias/drift/) los
+reportes HTML (referencia vs octubre 2026, y vs abr–sep como contexto), `drift_por_variable.csv`,
+`resumen_drift.json` y tres gráficas. El análisis completo está en
+[`docs/evidencias/drift/README.md`](docs/evidencias/drift/README.md). En resumen:
+
+| Comparación con la referencia | Variables con drift | Drift del objetivo (`demanda`) |
+|---|---|---|
+| Octubre 2026 (oficial) | 7 de 11 (64 %): calendario, rezagos de demanda, `longitud`, `capacidad` | 0.298 (+31 %) |
+| Abril–septiembre 2026 | 5 de 11 (45 %): calendario y rezagos | 0.117 (−11 %) |
+| Octubre 2026, solo las 370 estaciones que vio el champion | 5 de 11: el drift de estación desaparece | 0.501 (+51 %) |
+
+El drift de `mes`/`dia_anio` es esperado con una ventana de un mes. El de las variables de estación
+se debe a las 100 estaciones nuevas. La demanda de las estaciones conocidas sube 37.9 % respecto a
+octubre de 2024 y 2025, un cambio de nivel que la estacionalidad no explica. Los indicadores de
+calidad (duplicados, nulos, esquema y tipos) están limpios.
 
 <sub>[↑ Volver al contenido](#contenido)</sub>
 

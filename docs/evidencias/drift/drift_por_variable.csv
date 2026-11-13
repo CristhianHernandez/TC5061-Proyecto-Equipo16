@@ -1,0 +1,37 @@
+comparacion,columna,grupo,tipo,metodo,umbral,puntaje,drift,media_referencia,media_actual,cambio_media_pct,nulos_referencia_pct,nulos_actual_pct,fuera_de_referencia_pct
+referencia_vs_actual,dia_semana,calendario,categorica,jensenshannon,0.1,0.0399,False,2.9963,3.0969,3.3556,0.0,0.0,0.0
+referencia_vs_actual,mes,calendario,categorica,jensenshannon,0.1,0.7149,True,6.52,10.0,53.3751,0.0,0.0,0.0
+referencia_vs_actual,es_fin_semana,calendario,categorica,jensenshannon,0.1,0.004,False,0.2852,0.2904,1.8149,0.0,0.0,0.0
+referencia_vs_actual,dia_anio,calendario,numerica,wasserstein,0.1,1.0293,True,183.0835,289.0063,57.8549,0.0,0.0,0.0
+referencia_vs_actual,es_festivo,calendario,categorica,jensenshannon,0.1,0.0911,False,0.0238,0.0,-100.0,0.0,0.0,0.0
+referencia_vs_actual,demanda_lag_1,historial de demanda,numerica,wasserstein,0.1,0.3074,True,33.4676,43.9944,31.4534,0.1784,0.0,0.0069
+referencia_vs_actual,demanda_lag_7,historial de demanda,numerica,wasserstein,0.1,0.2668,True,33.4829,42.6219,27.2945,1.2516,0.0,0.0069
+referencia_vs_actual,demanda_media_7,historial de demanda,numerica,wasserstein,0.1,0.3025,True,33.4873,43.147,28.8458,1.2516,0.0,0.5568
+referencia_vs_actual,capacidad,estación,numerica,wasserstein,0.1,0.1082,True,16.9299,17.0138,0.4959,0.0,0.0,0.0
+referencia_vs_actual,latitud,estación,numerica,wasserstein,0.1,0.0585,False,20.6794,20.6782,-0.0059,0.0,0.0,0.2131
+referencia_vs_actual,longitud,estación,numerica,wasserstein,0.1,0.1408,True,-103.3624,-103.3621,-0.0003,0.0,0.0,3.8358
+referencia_vs_actual,demanda,objetivo,numerica,wasserstein,0.1,0.2981,True,33.4671,43.6748,30.5007,0.0,0.0,0.0069
+referencia_vs_reciente,dia_semana,calendario,categorica,jensenshannon,0.1,0.0051,False,2.9963,2.993,-0.109,0.0,0.0,0.0
+referencia_vs_reciente,mes,calendario,categorica,jensenshannon,0.1,0.5635,True,6.52,6.6637,2.2053,0.0,0.0,0.0
+referencia_vs_reciente,es_fin_semana,calendario,categorica,jensenshannon,0.1,0.0008,False,0.2852,0.2841,-0.3772,0.0,0.0,0.0
+referencia_vs_reciente,dia_anio,calendario,numerica,wasserstein,0.1,0.5203,True,183.0835,187.0148,2.1473,0.0,0.0,0.0
+referencia_vs_reciente,es_festivo,calendario,categorica,jensenshannon,0.1,0.0352,False,0.0238,0.0109,-53.999,0.0,0.0,0.0
+referencia_vs_reciente,demanda_lag_1,historial de demanda,numerica,wasserstein,0.1,0.1198,True,33.4676,29.6277,-11.4735,0.1784,0.0,0.0
+referencia_vs_reciente,demanda_lag_7,historial de demanda,numerica,wasserstein,0.1,0.1344,True,33.4829,29.1027,-13.082,1.2516,0.0,0.0
+referencia_vs_reciente,demanda_media_7,historial de demanda,numerica,wasserstein,0.1,0.139,True,33.4873,29.3195,-12.4459,1.2516,0.0,0.1573
+referencia_vs_reciente,capacidad,estación,numerica,wasserstein,0.1,0.0635,False,16.9299,17.0147,0.5011,0.0,0.0,0.0
+referencia_vs_reciente,latitud,estación,numerica,wasserstein,0.1,0.0407,False,20.6794,20.6786,-0.004,0.0,0.0,0.1586
+referencia_vs_reciente,longitud,estación,numerica,wasserstein,0.1,0.0809,False,-103.3624,-103.3618,-0.0005,0.0,0.0,1.8103
+referencia_vs_reciente,demanda,objetivo,numerica,wasserstein,0.1,0.1165,True,33.4671,29.7539,-11.0952,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,dia_semana,calendario,categorica,jensenshannon,0.1,0.0399,False,2.9963,3.0968,3.3528,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,mes,calendario,categorica,jensenshannon,0.1,0.7149,True,6.52,10.0,53.3751,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,es_fin_semana,calendario,categorica,jensenshannon,0.1,0.004,False,0.2852,0.2903,1.7985,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,dia_anio,calendario,numerica,wasserstein,0.1,1.0293,True,183.0835,289.0,57.8514,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,es_festivo,calendario,categorica,jensenshannon,0.1,0.0911,False,0.0238,0.0,-100.0,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,demanda_lag_1,historial de demanda,numerica,wasserstein,0.1,0.5122,True,33.4676,51.0078,52.4094,0.1784,0.0,0.0087
+referencia_vs_actual_estaciones_conocidas,demanda_lag_7,historial de demanda,numerica,wasserstein,0.1,0.4662,True,33.4829,49.4522,47.6939,1.2516,0.0,0.0087
+referencia_vs_actual_estaciones_conocidas,demanda_media_7,historial de demanda,numerica,wasserstein,0.1,0.518,True,33.4873,50.0293,49.3978,1.2516,0.0,0.7062
+referencia_vs_actual_estaciones_conocidas,capacidad,estación,numerica,wasserstein,0.1,0.0116,False,16.9299,16.8919,-0.2243,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,latitud,estación,numerica,wasserstein,0.1,0.0033,False,20.6794,20.6794,-0.0001,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,longitud,estación,numerica,wasserstein,0.1,0.0122,False,-103.3624,-103.3627,0.0003,0.0,0.0,0.0
+referencia_vs_actual_estaciones_conocidas,demanda,objetivo,numerica,wasserstein,0.1,0.5015,True,33.4671,50.639,51.3095,0.0,0.0,0.0087

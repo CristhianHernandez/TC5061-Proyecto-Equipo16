@@ -253,3 +253,16 @@ VIAJES_MONITOREO_DIR = MONITOREO_DIR / "viajes"
 ESTACIONES_MONITOREO_PARQUET = MONITOREO_DIR / "estaciones_2026_10.parquet"
 # Manifiesto versionado en Git: periodos, archivos con SHA-256, tamaños y huella de cada conjunto
 MANIFIESTO_MONITOREO = REFERENCES_DIR / "manifiesto_monitoreo.json"
+
+# Reporte de drift con Evidently (Entregable 8, PR de LH3). Los métodos se fijan para que las
+# pruebas con pocas filas y los datos reales usen la misma regla: Evidently cambiaría a KS y
+# chi cuadrada (p-values) con menos de 1,000 filas, y con cientos de miles de filas cualquier
+# diferencia mínima da un p-value pequeño. Las distancias miden la magnitud del cambio; hay
+# drift en una columna cuando la distancia es >= UMBRAL_DRIFT, y en el conjunto cuando la
+# proporción de variables con drift es >= PROPORCION_DRIFT_DATASET.
+METODO_DRIFT_NUMERICO = "wasserstein"  # Wasserstein normalizada por la desviación de referencia
+METODO_DRIFT_CATEGORICO = "jensenshannon"
+UMBRAL_DRIFT = 0.1
+PROPORCION_DRIFT_DATASET = 0.5
+# HTML, tablas, gráficas y salida de la corrida, versionados como evidencia
+DRIFT_DIR = PROJ_ROOT / "docs" / "evidencias" / "drift"

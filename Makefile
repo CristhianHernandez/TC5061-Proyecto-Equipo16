@@ -124,6 +124,11 @@ export-model:
 monitoring-data:
 	$(PYTHON_INTERPRETER) -m mibici.monitoring.datasets
 
+## Reporte de drift de Evidently (HTML, tablas y gráficas en docs/evidencias/drift/)
+.PHONY: monitoring-drift
+monitoring-drift:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.evidently_report
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

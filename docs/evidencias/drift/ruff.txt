@@ -1,0 +1,8 @@
+$ make lint
+ruff format --check
+26 files already formatted
+ruff check
+All checks passed!
+$ ruff check tests/test_evidently_report.py && ruff format --check tests/test_evidently_report.py
+All checks passed!
+1 file already formatted
