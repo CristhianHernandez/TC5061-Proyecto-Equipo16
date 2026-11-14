@@ -1,0 +1,4 @@
+$ ruff check mibici/monitoring/ab_compare.py mibici/monitoring/challenger_p1.py tests/test_ab_compare.py tests/test_challenger_p1.py
+All checks passed!
+$ ruff format --check (mismos archivos)
+4 files already formatted

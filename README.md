@@ -18,7 +18,7 @@ entrena, compara y lleva a producción un modelo por pregunta mediante el Model 
 | **Experimentación y Model Registry** (entrega 2) | [Qué registra cada corrida](#qué-registra-cada-corrida) · [Esquema del Model Registry: aliases](#esquema-del-model-registry-aliases) · [Modelo en producción de cada pregunta](#modelo-en-producción-de-cada-pregunta) · [P3: variables, métricas y regla de selección](#p3-variables-métricas-y-regla-de-selección) |
 | **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
 | **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
-| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) |
+| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) · [Challenger de P1](#challenger-de-p1) · [A/B offline](#ab-offline-champion-vs-challenger) · [Continuous Training](#recomendación-y-continuous-training) · [PR de la entrega](#pr-de-la-entrega-de-monitoreo) |
 | **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
 
 ## Preguntas
@@ -67,6 +67,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
 ├── docs/                  <- auditoría, contrato de serving (serving/) y evidencias
 │   ├── monitoring/        <- contrato de los conjuntos de drift y A/B (Entregable 8)
+│   ├── reportes/actividad10/ <- A/B offline: tabla, segmentos, bootstrap, gráficas y decisión (Entregable 8)
 │   └── evidencias/
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
 │       ├── deepchecks/    <- validación de datos
@@ -91,7 +92,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
     ├── serving/           <- model_loader.py, exportar.py (champion -> model_bundle), api.py y schemas.py
-    ├── monitoring/        <- datasets.py (ventanas para drift y A/B) y evidently_report.py (reporte de drift)
+    ├── monitoring/        <- datasets.py (ventanas), evidently_report.py (drift), train_challenger.py (P2),
+    │                         challenger_p1.py (challenger de P1) y ab_compare.py (A/B y política de CT)
     ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
     ├── plots.py           <- figuras que se registran como artefactos
     └── modeling/
@@ -591,6 +593,69 @@ El drift de `mes`/`dia_anio` es esperado con una ventana de un mes. El de las va
 se debe a las 100 estaciones nuevas. La demanda de las estaciones conocidas sube 37.9 % respecto a
 octubre de 2024 y 2025, un cambio de nivel que la estacionalidad no explica. Los indicadores de
 calidad (duplicados, nulos, esquema y tipos) están limpios.
+
+### Challenger de P1
+
+```bash
+make monitoring-challenger                      # o: python -m mibici.monitoring.challenger_p1
+```
+
+El A/B compara dos versiones **del mismo modelo registrado**. El challenger es el champion
+reentrenado: mismo algoritmo (HGB Poisson), mismos hiperparámetros (`learning_rate` 0.05,
+`max_iter` 100, `max_leaf_nodes` 63), mismas 11 variables y firma; solo cambia la ventana de
+entrenamiento, de referencia (oct-2024 a mar-2026) a referencia + reciente (hasta el 2026-09-30).
+Así la comparación responde una sola pregunta: ¿reentrenar con datos recientes mejora al modelo
+vigente? Antes del ajuste final se verifica sin tocar octubre: entrenado con referencia + abr–jun,
+mejora el MAE de jul–sep de 5.795 a 5.761 (+0.58 %). Se registra como versión nueva con alias
+`challenger`; el script falla si el alias `champion` se mueve.
+`train_challenger.py` (PR #21) aplica el mismo patrón a P2.
+
+### A/B offline: champion vs challenger
+
+```bash
+make monitoring-ab                              # o: python -m mibici.monitoring.ab_compare
+python -m mibici.monitoring.ab_compare --version-a 2 --version-b 3 --sin-mlflow
+```
+
+Resuelve los aliases a números una sola vez, carga ambas versiones con `pyfunc` (igual que la API),
+predice exactamente las 14,547 filas de octubre de 2026 y escribe en
+[`docs/reportes/actividad10/`](docs/reportes/actividad10/) la tabla comparativa, el desglose por
+segmento, día y estación, tres gráficas y `resultados_ab.json`. Es una **comparación offline
+controlada** (pareada, mismas filas), no un experimento con tráfico aleatorizado. La incertidumbre se
+mide con un bootstrap por bloques de días, porque las filas de un mismo día no son independientes.
+
+| Modelo | Versión | Entrenamiento | Evaluación (N) | MAE ↓ | RMSE ↓ | Δ MAE vs A |
+|---|---|---|---|---|---|---|
+| A · champion | 2 | oct-2024 a mar-2026 | oct-2026 (14,547) | 8.122 | 17.500 | — |
+| B · challenger | 3 | oct-2024 a sep-2026 | oct-2026 (14,547) | **8.018** | **16.852** | −0.104 (−1.27 %) |
+
+IC 95 % de ΔMAE: [−0.155, −0.054]. B gana 23 de 31 días (Wilcoxon p = 0.0004) y no empeora
+ningún segmento; la mejora se concentra en las estaciones conocidas de demanda alta (−1.9 %).
+Decisión de la regla: **promover challenger**. El análisis completo está en
+[`docs/reportes/actividad10/README.md`](docs/reportes/actividad10/README.md).
+
+### Recomendación y Continuous Training
+
+- **Promover la versión 3** (`challenger`) a `champion`, con shadow o canary corto antes de mover el
+  alias en el registry del equipo; la versión 2 queda como rollback.
+- **Adoptar reentrenamiento mensual gobernado:** al publicarse cada mes, recalcular drift y calidad,
+  reentrenar un candidato con todo lo disponible y promoverlo solo si gana el A/B en el mes nuevo.
+  La política está en `politica_continuous_training`: aquí se activan el drift del objetivo (0.298),
+  el del historial de demanda y el 21 % de filas de estaciones no vistas, y la acción es
+  `reentrenar_candidato`. El MAE absoluto del champion sube 40 % frente a jul–sep, pero el
+  relativo a la demanda baja de 19.3 % a 18.6 %: el modelo no se degradó, la demanda creció. Por
+  eso la política mide la degradación con el MAE relativo.
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+### PR de la entrega de monitoreo
+
+| Contribución | Responsable | Revisor asignado |
+|---|---|---|
+| [PR #19](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/19): ventanas, conjuntos, manifiesto y reglas sin fuga | CH1 - Cristhian | LH3 - Luis |
+| [PR #20](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/20): reporte de drift y calidad con Evidently | LH3 - Luis | HH2 - Horacio |
+| [PR #21](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/21): challenger registrado sin mover el champion (P2) | HH2 - Horacio | DH4 - Derick |
+| PR de la rama `feat/abtest-reporte-final`: challenger de P1, A/B offline, política de CT y reporte | DH4 - Derick | CH1 - Cristhian |
 
 <sub>[↑ Volver al contenido](#contenido)</sub>
 
