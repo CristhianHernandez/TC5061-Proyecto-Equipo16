@@ -266,3 +266,10 @@ UMBRAL_DRIFT = 0.1
 PROPORCION_DRIFT_DATASET = 0.5
 # HTML, tablas, gráficas y salida de la corrida, versionados como evidencia
 DRIFT_DIR = PROJ_ROOT / "docs" / "evidencias" / "drift"
+
+# Entregable 7: operación con Docker Compose (docker-compose.yml). El servicio `model-init` registra
+# en el MLflow del stack la copia del champion incluida en la imagen (make export-model) o, si no
+# hay copia (clon limpio, CI), un modelo de prueba con la misma firma. La API carga el modelo desde
+# ese registry por nombre y alias.
+MODEL_BUNDLE_INICIAL = Path(os.getenv("MODEL_BUNDLE_INICIAL", str(MODEL_PATH)))
+ORIGEN_MODELO_PRUEBA = "modelo-de-prueba-v1"  # huella fija del modelo de prueba determinista

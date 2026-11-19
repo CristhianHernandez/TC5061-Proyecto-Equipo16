@@ -1,0 +1,16 @@
+# Clon limpio (git clone + cambios del PR), sin model_bundle/: escenario del runner de CI
+# 2026-11-19T01:20:26Z · Docker 29.6.1
+$ COMPOSE="docker compose -p mibici-ci" API_HOST_PORT=8010 MLFLOW_HOST_PORT=5011 bash scripts/smoke_compose.sh
+== Levantando el stack
+
+NAME                 IMAGE              COMMAND                  SERVICE   CREATED          STATUS                            PORTS
+mibici-ci-api-1      mibici-ops:local   "uvicorn mibici.serv…"   api       14 seconds ago   Up 3 seconds (health: starting)   0.0.0.0:8010->8000/tcp, [::]:8010->8000/tcp
+mibici-ci-mlflow-1   mibici-ops:local   "mlflow server --bac…"   mlflow    14 seconds ago   Up 13 seconds (healthy)           0.0.0.0:5011->5000/tcp, [::]:5011->5000/tcp
+== Salud de la API
+{"estado":"listo","modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"0d23a4a49ebd49ee934f019f66d6224d"}}
+== Predicción con docs/serving/ejemplo_entrada_p1.json
+{"predicciones":[29.740057155565246,47.89275650131049],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"0d23a4a49ebd49ee934f019f66d6224d"}}
+OK: stack sano, modelo cargado desde MLflow y predicción válida
+
+$ docker compose logs model-init
+model-init-1  | {"accion": "registrado", "version": "1", "challenger": null, "run_id": "0d23a4a49ebd49ee934f019f66d6224d", "origen": "modelo-de-prueba", "huella_modelo": "modelo-de-prueba-v1"}

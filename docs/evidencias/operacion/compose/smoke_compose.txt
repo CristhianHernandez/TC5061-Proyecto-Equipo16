@@ -1,0 +1,34 @@
+# 2026-11-19T01:09:03Z · commit base 6087174 · rama feat/ops-compose
+# Docker 29.6.1 · Docker Compose version v5.3.0 · Darwin arm64
+# model_bundle/: copia del champion versión 2 del registry del equipo
+$ PERSISTENCIA=1 MANTENER=1 bash scripts/smoke_compose.sh
+== Levantando el stack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+NAME              IMAGE              COMMAND                  SERVICE   CREATED          STATUS                            PORTS
+mibici-api-1      mibici-ops:local   "uvicorn mibici.serv…"   api       11 seconds ago   Up 3 seconds (health: starting)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+mibici-mlflow-1   mibici-ops:local   "mlflow server --bac…"   mlflow    11 seconds ago   Up 10 seconds (healthy)           0.0.0.0:5001->5000/tcp, [::]:5001->5000/tcp
+== Salud de la API
+{"estado":"listo","modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"415f2d0ffdf2454c9d699f0e52586df4"}}
+== Predicción con docs/serving/ejemplo_entrada_p1.json
+{"predicciones":[40.697957479000046,276.77983750628846],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"415f2d0ffdf2454c9d699f0e52586df4"}}
+== Persistencia: down (sin -v) y up
+{"estado":"listo","modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1","alias":"champion","run_id":"415f2d0ffdf2454c9d699f0e52586df4"}}
+OK: stack sano, modelo cargado desde MLflow y predicción válida

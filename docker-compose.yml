@@ -1,0 +1,120 @@
+# Sistema MiBici completo (Entregable 7): MLflow + inicialización del modelo + API de P1.
+#
+#   docker compose up --build -d          # o: make up   (Podman: podman compose ...)
+#   docker compose ps                     # api y mlflow "healthy"; model-init "Exited (0)"
+#   docker compose down                   # conserva el volumen de MLflow (down -v lo borra)
+#
+# Orden de arranque garantizado por healthchecks y depends_on:
+#   mlflow (sano) -> model-init (registra el champion y termina con éxito) -> api (sana al cargar)
+# Puertos, recursos y modelo se ajustan con variables de entorno o un archivo .env
+# (ver .env.example). Contrato y detalles en docs/operacion/contrato_arranque.md.
+
+name: mibici
+
+# Una sola imagen para los tres servicios: la API de la semana 8, que ya incluye MLflow 3.17.2
+# fijado en requirements-serving.txt (cliente y servidor con la misma versión).
+x-imagen: &imagen
+  build:
+    context: .
+    dockerfile: Containerfile
+  image: mibici-ops:${IMAGEN_TAG:-local}
+
+x-logs: &logs
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  mlflow:
+    <<: [*imagen, *logs]
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri=sqlite:////mlflow/mlflow.db
+      - --artifacts-destination=/mlflow/artifacts
+      - --serve-artifacts
+      - --host=0.0.0.0
+      - --port=5000
+      - --workers=${MLFLOW_WORKERS:-1}
+      # MLflow 3 rechaza (403) hosts que no sean localhost o IP privada; la API llega como mlflow:5000
+      - --allowed-hosts=mlflow,mlflow:5000,localhost,localhost:*,127.0.0.1,127.0.0.1:*
+    environment:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+      # MLflow 3 arranca por defecto 7 procesos huey para tareas de GenAI que el proyecto no usa:
+      # ~1.6 GiB en reposo. Sin ellos el registry usa ~360 MiB (medido con docker stats).
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+    ports:
+      - "${MLFLOW_HOST_PORT:-5001}:5000"  # en macOS el 5000 lo ocupa AirPlay
+    volumes:
+      - mlflow-datos:/mlflow  # metadatos (SQLite) y artefactos sobreviven a recrear el contenedor
+    networks: [mibici]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "${MLFLOW_CPUS:-1}"
+          memory: ${MLFLOW_MEMORIA:-1g}
+    restart: unless-stopped
+
+  model-init:
+    <<: [*imagen, *logs]
+    command: ["python", "-m", "mibici.serving.inicializar"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_BUNDLE_INICIAL: /app/model_bundle  # copia del champion si se exportó antes del build
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    networks: [mibici]
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: [*imagen, *logs]
+    command:
+      - uvicorn
+      - mibici.serving.api:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --workers=${API_WORKERS:-1}
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_URI: ${MODEL_URI:-models:/mibici-equipo16-p1-demanda@champion}
+      # Ruta sin copia local: obliga a cargar el modelo desde el registry del stack
+      MODEL_PATH: /app/sin-copia-local
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    ports:
+      - "${API_HOST_PORT:-8000}:8000"
+    networks: [mibici]
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      model-init:
+        condition: service_completed_successfully
+    healthcheck:
+      # /health responde 200 solo cuando el modelo está cargado y cumple el contrato (503 si no)
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPUS:-2}"
+          memory: ${API_MEMORIA:-2g}
+    restart: unless-stopped
+
+networks:
+  mibici:
+    driver: bridge
+
+volumes:
+  mlflow-datos:

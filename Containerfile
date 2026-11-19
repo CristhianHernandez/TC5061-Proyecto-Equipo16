@@ -13,11 +13,14 @@ COPY pyproject.toml README.md LICENSE ./
 COPY mibici/ ./mibici/
 RUN pip install --no-cache-dir --no-deps .
 
-COPY model_bundle/ ./model_bundle/
+# Copia opcional del champion (make export-model). El patrón [e] no falla si la carpeta no existe:
+# así un clon limpio (CI) también construye, y en Docker Compose el modelo llega desde MLflow.
+COPY model_bundl[e] ./model_bundle/
 
 RUN groupadd --system appgroup && \
     useradd --system --gid appgroup --home-dir /app --no-create-home appuser && \
-    chown -R appuser:appgroup /app
+    mkdir -p /mlflow && \
+    chown -R appuser:appgroup /app /mlflow
 
 USER appuser
 
