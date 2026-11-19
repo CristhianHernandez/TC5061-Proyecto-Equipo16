@@ -43,12 +43,13 @@ def leer_recursos(ruta: Path) -> pd.DataFrame:
 def resumen_recursos(recursos: pd.DataFrame, inicio: str, fin: str) -> dict:
     """Promedio, p95 y máximo de CPU y RAM por servicio dentro de la ventana [inicio, fin]."""
     ventana = recursos[
-        (recursos["timestamp"] >= pd.Timestamp(inicio)) & (recursos["timestamp"] <= pd.Timestamp(fin))
+        (recursos["timestamp"] >= pd.Timestamp(inicio))
+        & (recursos["timestamp"] <= pd.Timestamp(fin))
     ]
     salida = {}
     for servicio, g in ventana.groupby("servicio"):
         salida[servicio] = {
-            "muestras": int(len(g)),
+            "muestras": len(g),
             "cpu_pct_prom": round(g["cpu_pct"].mean(), 1),
             "cpu_pct_p95": round(g["cpu_pct"].quantile(0.95), 1),
             "cpu_pct_max": round(g["cpu_pct"].max(), 1),
@@ -75,11 +76,14 @@ def _config_api(docker: str) -> dict:
     cmd = info["Config"]["Cmd"] or []
     workers = next((c.split("=", 1)[1] for c in cmd if c.startswith("--workers=")), "1")
     host = info["HostConfig"]
+    entorno = dict(e.split("=", 1) for e in info["Config"].get("Env") or [] if "=" in e)
     return {
         "api_workers": int(workers),
         "api_cpus_limite": (host.get("NanoCpus") or 0) / 1e9 or None,
         "api_mem_limite_mib": (host.get("Memory") or 0) / 2**20 or None,
         "imagen": info["Config"]["Image"],
+        # Hilos de OpenMP/OpenBLAS del modelo (sin fijar = uno por núcleo visible en la VM)
+        "omp_num_threads": entorno.get("OMP_NUM_THREADS"),
     }
 
 

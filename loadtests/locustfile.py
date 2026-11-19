@@ -31,9 +31,7 @@ import gevent
 from locust import HttpUser, between, events, task
 from validacion import validar_respuesta  # locust agrega loadtests/ al sys.path
 
-PAYLOADS = Path(
-    os.environ.get("LOCUST_PAYLOADS", Path(__file__).with_name("payloads_p1.json"))
-)
+PAYLOADS = Path(os.environ.get("LOCUST_PAYLOADS", Path(__file__).with_name("payloads_p1.json")))
 CALENTAMIENTO_S = float(os.environ.get("LOCUST_CALENTAMIENTO", "60"))
 ESPERA_MIN = float(os.environ.get("LOCUST_ESPERA_MIN", "0.5"))
 ESPERA_MAX = float(os.environ.get("LOCUST_ESPERA_MAX", "1.5"))

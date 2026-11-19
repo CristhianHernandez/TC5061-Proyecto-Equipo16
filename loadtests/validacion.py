@@ -5,9 +5,7 @@ import math
 MODELO_ESPERADO = "mibici-equipo16-p1-demanda"
 
 
-def validar_respuesta(
-    datos: object, esperadas: int, modelo: str = MODELO_ESPERADO
-) -> str | None:
+def validar_respuesta(datos: object, esperadas: int, modelo: str = MODELO_ESPERADO) -> str | None:
     """Devuelve el motivo del fallo o None si la respuesta 200 cumple el contrato.
 
     Exitosa = objeto JSON con `predicciones`, una lista de `esperadas` floats finitos > 0, y
