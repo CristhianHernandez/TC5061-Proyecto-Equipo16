@@ -139,6 +139,26 @@ monitoring-challenger:
 monitoring-ab:
 	$(PYTHON_INTERPRETER) -m mibici.monitoring.ab_compare
 
+# Sistema completo con Docker Compose (Entregable 7). COMPOSE="podman compose" para Podman.
+COMPOSE ?= docker compose
+
+## Levantar MLflow, model-init y la API con una sola orden (docker-compose.yml)
+.PHONY: up
+up:
+	$(COMPOSE) up --build -d
+
+## Detener el stack conservando el volumen de MLflow (make down-v también lo borra)
+.PHONY: down down-v
+down:
+	$(COMPOSE) down
+down-v:
+	$(COMPOSE) down -v
+
+## Prueba de humo del stack: salud, predicción y persistencia (scripts/smoke_compose.sh)
+.PHONY: smoke-compose
+smoke-compose:
+	COMPOSE="$(COMPOSE)" PERSISTENCIA=1 bash scripts/smoke_compose.sh
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

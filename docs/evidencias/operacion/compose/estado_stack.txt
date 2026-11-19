@@ -1,0 +1,44 @@
+$ docker compose ps -a
+SERVICE      STATUS                      PORTS
+api          Up 10 seconds (healthy)     0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+mlflow       Up 17 seconds (healthy)     0.0.0.0:5001->5000/tcp, [::]:5001->5000/tcp
+model-init   Exited (0) 10 seconds ago   
+
+$ docker compose logs model-init  (resumen)
+model-init-1  | {"accion": "sin_cambios", "version": "1", "origen": "bundle"}
+
+$ docker compose logs api  (carga del modelo)
+api-1  | 2026-11-19 01:09:28.049 | INFO     | mibici.serving.model_loader:cargar_modelo:223 - No hay copia del modelo en /app/sin-copia-local; se carga models:/mibici-equipo16-p1-demanda@champion del registry
+api-1  | 2026-11-19 01:09:28.726 | INFO     | mibici.serving.model_loader:cargar_modelo:234 - Modelo mibici-equipo16-p1-demanda v1 cargado (registry)
+api-1  | INFO:     Application startup complete.
+
+# Versión registrada en el MLflow del stack y su linaje (API REST de MLflow desde el host)
+{
+  "version": "1",
+  "source": "mlflow-artifacts:/1/415f2d0ffdf2454c9d699f0e52586df4/artifacts/model",
+  "aliases": [
+    "champion"
+  ],
+  "tags": {
+    "origen": "bundle",
+    "huella_modelo": "m-fa145e3c4df44c24919ccab3e25e3b92",
+    "version_origen": "2",
+    "run_id_origen": "47933c5b0df749edaeb159289053f70e",
+    "git_commit": "c30cd49872f97b05e580964674894aac223120af",
+    "version_datos": "4d8c2a1292fc",
+    "run_name_origen": "p1-hgb-featuresv1-learning_rate0.05-max_iter100-max_leaf_nodes63"
+  }
+}
+
+$ docker volume ls  /  docker network ls  (recursos del stack)
+mibici_mlflow-datos
+mibici_mibici bridge
+
+# docker stats en reposo, 01:09:37Z
+NAME              CPU %     MEM USAGE / LIMIT   PIDS
+mibici-api-1      0.56%     198.2MiB / 2GiB     30
+mibici-mlflow-1   0.27%     359.9MiB / 1GiB     38
+
+# Contrato HTTP de la semana 8 contra la API del stack de Compose
+$ MIBICI_API_URL=http://127.0.0.1:8000 python -m pytest tests/test_serving_e2e.py -q -m contenedor
+11 passed in 0.07s

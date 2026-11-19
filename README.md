@@ -19,6 +19,7 @@ entrena, compara y lleva a producción un modelo por pregunta mediante el Model 
 | **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
 | **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
 | **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) · [Challenger de P1](#challenger-de-p1) · [A/B offline](#ab-offline-champion-vs-challenger) · [Continuous Training](#recomendación-y-continuous-training) · [PR de la entrega](#pr-de-la-entrega-de-monitoreo) |
+| **Sistema en operación** (Entregable 7) | [Sistema completo con Docker Compose](#sistema-completo-con-docker-compose) · [Arranque con un solo comando](#arranque-con-un-solo-comando) · [Servicios y modelo](#servicios-y-modelo) · [Configuración](#configuración-del-stack) |
 | **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
 
 ## Preguntas
@@ -60,6 +61,8 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── MLproject              <- MLflow Project: entradas ingest, train, register y predict
 ├── Containerfile          <- imagen OCI de la API (Docker o Podman) con el champion de P1 empaquetado
 ├── .dockerignore          <- contexto de build mínimo (sin datos, mlruns, mlflow.db ni .env)
+├── docker-compose.yml     <- stack completo: mlflow + model-init + api con una sola orden (Entregable 7)
+├── .env.example           <- variables opcionales: URI de MLflow, puertos y recursos del stack
 ├── python_env.yaml        <- entorno del proyecto (Python 3.13 + requirements.txt)
 ├── Makefile               <- atajos: make mlflow, data, baselines, train, register, predict, lint, test
 ├── README.md
@@ -67,6 +70,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
 ├── docs/                  <- auditoría, contrato de serving (serving/) y evidencias
 │   ├── monitoring/        <- contrato de los conjuntos de drift y A/B (Entregable 8)
+│   ├── operacion/         <- contrato de arranque del stack de Compose (Entregable 7)
 │   ├── reportes/actividad10/ <- A/B offline: tabla, segmentos, bootstrap, gráficas y decisión (Entregable 8)
 │   └── evidencias/
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
@@ -83,6 +87,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── requirements-dev.txt   <- herramientas de pruebas, calidad y seguridad
 ├── requirements-serving.txt <- dependencias mínimas de la imagen de la API
 ├── scripts/smoke_container.sh <- build, run y prueba E2E del contenedor
+├── scripts/smoke_compose.sh <- prueba de humo del stack de Compose: salud, predicción y persistencia
 ├── pytest.ini             <- marcas y ejecución estricta de pytest
 ├── tests/                 <- pruebas con datos sintéticos y MLflow temporal (pytest)
 └── mibici/
@@ -92,6 +97,7 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
     ├── dataset.py         <- entrada ingest: descarga, normalización, datos personales fuera y manifiesto
     ├── features.py        <- limpieza, objetivos y variables de P1, P2 y P3; partición temporal
     ├── serving/           <- model_loader.py, exportar.py (champion -> model_bundle), api.py y schemas.py
+    │                         inicializar.py: servicio model-init del stack de Compose
     ├── monitoring/        <- datasets.py (ventanas), evidently_report.py (drift), train_challenger.py (P2),
     │                         challenger_p1.py (challenger de P1) y ab_compare.py (A/B y política de CT)
     ├── tracking.py        <- corridas de MLflow con tags, parámetros obligatorios y nested runs
@@ -656,6 +662,64 @@ Decisión de la regla: **promover challenger**. El análisis completo está en
 | [PR #20](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/20): reporte de drift y calidad con Evidently | LH3 - Luis | HH2 - Horacio |
 | [PR #21](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/21): challenger registrado sin mover el champion (P2) | HH2 - Horacio | DH4 - Derick |
 | PR de la rama `feat/abtest-reporte-final`: challenger de P1, A/B offline, política de CT y reporte | DH4 - Derick | CH1 - Cristhian |
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## Sistema completo con Docker Compose
+
+El proyecto se levanta como un sistema de tres servicios con una sola orden (Entregable 7). La API de
+la semana 8 deja de leer el modelo de una copia local y lo carga del Model Registry de un MLflow que
+corre en el mismo stack. El contrato completo, con decisiones y notas para pruebas de carga, CI y
+FinOps, está en [`docs/operacion/contrato_arranque.md`](docs/operacion/contrato_arranque.md).
+
+### Arranque con un solo comando
+
+```bash
+make export-model MLFLOW_PORT=5001   # opcional: incluir en la imagen la copia del champion real
+docker compose up --build -d         # o: make up       (Podman: podman compose up --build -d)
+docker compose ps                    # api y mlflow "healthy"; model-init "Exited (0)"
+curl -s http://127.0.0.1:8000/health
+curl -s -X POST http://127.0.0.1:8000/predict -H 'Content-Type: application/json' \
+  -d @docs/serving/ejemplo_entrada_p1.json
+make smoke-compose                   # salud, predicción y persistencia; detiene el stack al final
+docker compose down                  # conserva el volumen de MLflow (make down-v también lo borra)
+```
+
+La API queda en <http://127.0.0.1:8000> (Swagger en `/docs`) y la interfaz de MLflow del stack en
+<http://127.0.0.1:5001>. Requiere Docker con Compose v2 (o Podman con `podman compose`). No hace falta
+el `mlflow.db` local ni los datos de MiBici.
+
+### Servicios y modelo
+
+| Servicio | Función | Salud |
+|---|---|---|
+| `mlflow` | Tracking y Model Registry con SQLite y artefactos servidos por HTTP en el volumen `mlflow-datos` | `GET /health` |
+| `model-init` | Registra el champion de P1 en ese registry y termina; no duplica versiones al recrear | Código de salida 0 |
+| `api` | API FastAPI de la semana 8; carga `models:/mibici-equipo16-p1-demanda@champion` desde `mlflow` | `GET /health` (200 con el modelo cargado) |
+
+El orden lo garantizan los healthchecks: `mlflow` sano → `model-init` terminado → `api`. Si se
+exportó el champion antes del build, `model-init` registra esa copia exacta (versión 1 del stack,
+con etiquetas `version_origen = 2`, corrida, commit y versión de datos del registry del equipo). En
+un clon limpio sin `model_bundle/`, como el runner de CI, registra un modelo de prueba con la misma
+firma (`origen = modelo-de-prueba`) para verificar que el sistema arranca y predice; las mediciones
+de carga y costo se hacen con el champion real.
+
+### Configuración del stack
+
+- **Red y volumen:** red `mibici` propia; el volumen `mlflow-datos` conserva metadatos y artefactos
+  al recrear los contenedores (verificado con `make smoke-compose`).
+- **Variables:** puertos (`API_HOST_PORT`, `MLFLOW_HOST_PORT`), procesos (`API_WORKERS`,
+  `MLFLOW_WORKERS`), límites de CPU y memoria por servicio y `MODEL_URI`, documentados en
+  [`.env.example`](.env.example).
+- **Recursos:** límites por defecto de 2 CPU y 2 GiB para la API y 1 CPU y 1 GiB para MLflow. En
+  reposo, la API usa ~200 MiB y MLflow ~360 MiB.
+- **MLflow 3 ajustado:** `--allowed-hosts` permite el host interno `mlflow:5000` (por defecto
+  respondería 403) y `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false` evita siete procesos de GenAI que
+  no se usan (de 1.6 GiB a ~360 MiB en reposo).
+- **Imagen:** los tres servicios usan la imagen del `Containerfile`. La copia del modelo en la
+  imagen es opcional, así que la imagen de la semana 8 sigue funcionando sola.
+
+Evidencia: [`docs/evidencias/operacion/compose/`](docs/evidencias/operacion/compose/).
 
 <sub>[↑ Volver al contenido](#contenido)</sub>
 
