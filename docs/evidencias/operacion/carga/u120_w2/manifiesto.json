@@ -1,0 +1,82 @@
+{
+  "escenario": "u120_w2",
+  "generado_utc": "2026-11-19T02:28:24Z",
+  "git_commit": "e228ada",
+  "git_sucio": true,
+  "modelo": {
+    "nombre": "mibici-equipo16-p1-demanda",
+    "version_stack": "1",
+    "origen": "bundle",
+    "version_origen": "2",
+    "run_id_origen": "86cc548d36e64f418d45ca053f11312a",
+    "run_id_stack": "2b4e0871e2b24586a64041bca91d3bdd"
+  },
+  "carga": {
+    "usuarios": 120,
+    "spawn_rate_usuarios_s": 10.0,
+    "espera_s": [
+      0.5,
+      1.5
+    ],
+    "calentamiento_s": 60.0,
+    "registros_por_peticion": 1,
+    "endpoint": "POST /predict"
+  },
+  "ventana": {
+    "inicio_prueba_utc": "2026-11-19T02:24:23Z",
+    "inicio_utc": "2026-11-19T02:25:23Z",
+    "fin_utc": "2026-11-19T02:28:23Z",
+    "duracion_s": 180.0
+  },
+  "resultados_ventana": {
+    "peticiones_totales": 19805,
+    "peticiones_fallidas": 0,
+    "predicciones_exitosas": 19805,
+    "tasa_error_pct": 0.0,
+    "rps_prom": 110.03,
+    "predicciones_por_s": 110.03,
+    "latencia_ms": {
+      "p50": 30.0,
+      "p95": 380.0,
+      "p99": 530.0,
+      "promedio": 87.9,
+      "max": 829.3649590050336
+    }
+  },
+  "recursos_ventana": {
+    "api": {
+      "muestras": 54,
+      "cpu_pct_prom": 172.1,
+      "cpu_pct_p95": 214.6,
+      "cpu_pct_max": 216.6,
+      "mem_mib_prom": 431.1,
+      "mem_mib_max": 440.2,
+      "limite_mem_mib": 2048.0
+    },
+    "mlflow": {
+      "muestras": 54,
+      "cpu_pct_prom": 2.5,
+      "cpu_pct_p95": 13.4,
+      "cpu_pct_max": 13.9,
+      "mem_mib_prom": 380.0,
+      "mem_mib_max": 391.9,
+      "limite_mem_mib": 1024.0
+    }
+  },
+  "configuracion_api": {
+    "api_workers": 2,
+    "api_cpus_limite": 2.0,
+    "api_mem_limite_mib": 2048.0,
+    "imagen": "mibici-ops:local"
+  },
+  "maquina": {
+    "host": "Darwin 26.5.2 arm64",
+    "cpu": "Apple M4 Pro",
+    "nucleos_host": 12,
+    "ram_host_gib": 24.0,
+    "motor_contenedores": "docker 27.4.0",
+    "vm_nucleos": 12,
+    "vm_ram_gib": 7.65,
+    "locust_mismo_host": true
+  }
+}

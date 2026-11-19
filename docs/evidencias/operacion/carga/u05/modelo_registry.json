@@ -1,0 +1,47 @@
+{
+  "model_version": {
+    "name": "mibici-equipo16-p1-demanda",
+    "version": "1",
+    "creation_timestamp": 1795053521605,
+    "last_updated_timestamp": 1795053521670,
+    "current_stage": "None",
+    "description": "Champion de P1 servido por el stack de Docker Compose (origen: bundle, versi\u00f3n 2 del registry del equipo).",
+    "source": "mlflow-artifacts:/1/2b4e0871e2b24586a64041bca91d3bdd/artifacts/model",
+    "run_id": "2b4e0871e2b24586a64041bca91d3bdd",
+    "status": "READY",
+    "tags": [
+      {
+        "key": "origen",
+        "value": "bundle"
+      },
+      {
+        "key": "huella_modelo",
+        "value": "m-1491e9839128466e80c188b17399ff9d"
+      },
+      {
+        "key": "version_origen",
+        "value": "2"
+      },
+      {
+        "key": "run_id_origen",
+        "value": "86cc548d36e64f418d45ca053f11312a"
+      },
+      {
+        "key": "git_commit",
+        "value": ""
+      },
+      {
+        "key": "version_datos",
+        "value": ""
+      },
+      {
+        "key": "run_name_origen",
+        "value": ""
+      }
+    ],
+    "run_link": "",
+    "aliases": [
+      "champion"
+    ]
+  }
+}
