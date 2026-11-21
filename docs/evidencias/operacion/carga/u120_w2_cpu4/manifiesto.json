@@ -1,0 +1,82 @@
+{
+  "escenario": "u120_w2_cpu4",
+  "generado_utc": "2026-11-19T02:34:39Z",
+  "git_commit": "e228ada",
+  "git_sucio": true,
+  "modelo": {
+    "nombre": "mibici-equipo16-p1-demanda",
+    "version_stack": "1",
+    "origen": "bundle",
+    "version_origen": "2",
+    "run_id_origen": "86cc548d36e64f418d45ca053f11312a",
+    "run_id_stack": "2b4e0871e2b24586a64041bca91d3bdd"
+  },
+  "carga": {
+    "usuarios": 120,
+    "spawn_rate_usuarios_s": 10.0,
+    "espera_s": [
+      0.5,
+      1.5
+    ],
+    "calentamiento_s": 60.0,
+    "registros_por_peticion": 1,
+    "endpoint": "POST /predict"
+  },
+  "ventana": {
+    "inicio_prueba_utc": "2026-11-19T02:30:38Z",
+    "inicio_utc": "2026-11-19T02:31:38Z",
+    "fin_utc": "2026-11-19T02:34:38Z",
+    "duracion_s": 180.0
+  },
+  "resultados_ventana": {
+    "peticiones_totales": 20114,
+    "peticiones_fallidas": 0,
+    "predicciones_exitosas": 20114,
+    "tasa_error_pct": 0.0,
+    "rps_prom": 111.74,
+    "predicciones_por_s": 111.74,
+    "latencia_ms": {
+      "p50": 51.0,
+      "p95": 190.0,
+      "p99": 300.0,
+      "promedio": 71.1,
+      "max": 551.0412500007078
+    }
+  },
+  "recursos_ventana": {
+    "api": {
+      "muestras": 54,
+      "cpu_pct_prom": 390.3,
+      "cpu_pct_p95": 444.0,
+      "cpu_pct_max": 477.4,
+      "mem_mib_prom": 429.8,
+      "mem_mib_max": 443.0,
+      "limite_mem_mib": 2048.0
+    },
+    "mlflow": {
+      "muestras": 54,
+      "cpu_pct_prom": 2.4,
+      "cpu_pct_p95": 15.5,
+      "cpu_pct_max": 16.0,
+      "mem_mib_prom": 380.5,
+      "mem_mib_max": 386.6,
+      "limite_mem_mib": 1024.0
+    }
+  },
+  "configuracion_api": {
+    "api_workers": 2,
+    "api_cpus_limite": 4.0,
+    "api_mem_limite_mib": 2048.0,
+    "imagen": "mibici-ops:local"
+  },
+  "maquina": {
+    "host": "Darwin 26.5.2 arm64",
+    "cpu": "Apple M4 Pro",
+    "nucleos_host": 12,
+    "ram_host_gib": 24.0,
+    "motor_contenedores": "docker 27.4.0",
+    "vm_nucleos": 12,
+    "vm_ram_gib": 7.65,
+    "locust_mismo_host": true
+  }
+}

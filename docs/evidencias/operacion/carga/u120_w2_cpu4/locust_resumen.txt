@@ -1,0 +1,19 @@
+[2026-11-18 20:30:38,554] Dericks-MacBook-Pro/INFO/locust.main: Starting Locust 2.47.0
+[2026-11-18 20:30:38,556] Dericks-MacBook-Pro/INFO/locust.main: Run time limit set to 240 seconds
+[2026-11-18 20:30:38,556] Dericks-MacBook-Pro/INFO/locust.runners: Ramping to 120 users at a rate of 10.00 per second
+[2026-11-18 20:30:49,601] Dericks-MacBook-Pro/INFO/locust.runners: All users spawned: {"UsuarioPrediccion": 120} (120 total users)
+[2026-11-18 20:34:38,424] Dericks-MacBook-Pro/INFO/locust.main: --run-time limit reached, shutting down
+[2026-11-18 20:34:38,483] Dericks-MacBook-Pro/INFO/locust.main: Shutting down (exit code 0)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+POST     POST /predict                                                                  20114     0(0.00%) |     71      13     551     51 |  111.81        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                     20114     0(0.00%) |     71      13     551     51 |  111.81        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+POST     POST /predict                                                                          51     70     87    100    150    190    250    300    470    500    550  20114
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                             51     70     87    100    150    190    250    300    470    500    550  20114
+

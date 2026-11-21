@@ -12,3 +12,6 @@ setuptools==80.10.2
 # Análisis de seguridad del código y de las dependencias
 bandit==1.9.4
 pip-audit==2.10.1
+
+# Pruebas de carga de la API (Entregable 7, loadtests/)
+locust==2.47.0

@@ -159,6 +159,27 @@ down-v:
 smoke-compose:
 	COMPOSE="$(COMPOSE)" PERSISTENCIA=1 bash scripts/smoke_compose.sh
 
+# Pruebas de carga con Locust contra el stack levantado (loadtests/, evidencia en
+# docs/evidencias/operacion/carga/<ESCENARIO>/). Requiere el champion real en el stack.
+ESCENARIO ?= u05
+USUARIOS ?= 5
+SPAWN ?= 1
+
+## Correr un escenario de carga: make carga ESCENARIO=u20 USUARIOS=20 SPAWN=2
+.PHONY: carga carga-oficial carga-graficas
+carga:
+	PYTHON=$(PYTHON_INTERPRETER) bash loadtests/run_escenario.sh $(ESCENARIO) $(USUARIOS) $(SPAWN)
+
+## Escenarios oficiales de FinOps (5 y 20 usuarios) y sus gráficas
+carga-oficial:
+	PYTHON=$(PYTHON_INTERPRETER) bash loadtests/run_escenario.sh u05 5 1
+	PYTHON=$(PYTHON_INTERPRETER) bash loadtests/run_escenario.sh u20 20 2
+	$(PYTHON_INTERPRETER) loadtests/graficas_carga.py
+
+## Gráficas y tabla resumen de todos los escenarios medidos
+carga-graficas:
+	$(PYTHON_INTERPRETER) loadtests/graficas_carga.py
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

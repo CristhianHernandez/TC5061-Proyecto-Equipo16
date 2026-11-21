@@ -1,0 +1,17 @@
+{
+  "inicio_prueba_utc": "2026-11-19T02:11:09Z",
+  "inicio_ventana_utc": "2026-11-19T02:12:09Z",
+  "fin_ventana_utc": "2026-11-19T02:15:09Z",
+  "calentamiento_s": 60.0,
+  "espera_s": [
+    0.5,
+    1.5
+  ],
+  "registros_por_peticion": 1,
+  "pool_payloads": "payloads_p1.json",
+  "peticiones": 3539,
+  "fallidas": 0,
+  "predicciones_exitosas": 3539,
+  "locust_peticiones": 3539,
+  "locust_fallidas": 0
+}
