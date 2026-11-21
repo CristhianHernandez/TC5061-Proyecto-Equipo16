@@ -1,0 +1,122 @@
+{
+  "_descripcion": "Tarifas y supuestos del análisis FinOps del Entregable 7. Lo lee scripts/estimate_inference_cost.py. Cambiar un precio aquí y volver a correr `make finops` regenera todas las tablas.",
+  "proveedor": "AWS",
+  "region": "us-east-1 (N. Virginia)",
+  "moneda": "USD",
+  "fecha_consulta": "2026-11-21",
+  "modalidad": "On-Demand, Linux, facturación por segundo; sin impuestos, planes de ahorro ni capa gratuita",
+  "fuentes": {
+    "ec2": "https://aws.amazon.com/ec2/pricing/on-demand/",
+    "fargate": "https://aws.amazon.com/fargate/pricing/",
+    "ebs": "https://aws.amazon.com/ebs/pricing/",
+    "transferencia": "https://aws.amazon.com/ec2/pricing/on-demand/#Data_Transfer",
+    "ecr": "https://aws.amazon.com/ecr/pricing/"
+  },
+  "instancia_referencia": "t4g.medium",
+  "_justificacion_referencia": "Las mediciones se hicieron en arm64 (Apple M4 Pro); Graviton es la misma arquitectura y la imagen corre sin cambios. La referencia respeta los límites que declara hoy el Compose (API 2 CPU / 2 GiB y MLflow 1 CPU / 1 GiB, 3 GiB en total), así que necesita 2 vCPU y 4 GiB. En u05 y u20 la CPU promedio queda bajo la línea base de la instancia burstable y no genera créditos excedentes. El ajuste de tamaño con lo medido (t4g.small) se evalúa como optimización.",
+  "instancias": [
+    {
+      "sku": "t4g.small",
+      "arquitectura": "arm64",
+      "vcpu": 2,
+      "memoria_gib": 2,
+      "precio_hora": 0.0168,
+      "burstable": true,
+      "linea_base_por_vcpu": 0.2
+    },
+    {
+      "sku": "t4g.medium",
+      "arquitectura": "arm64",
+      "vcpu": 2,
+      "memoria_gib": 4,
+      "precio_hora": 0.0336,
+      "burstable": true,
+      "linea_base_por_vcpu": 0.2
+    },
+    {
+      "sku": "c7g.medium",
+      "arquitectura": "arm64",
+      "vcpu": 1,
+      "memoria_gib": 2,
+      "precio_hora": 0.0363,
+      "burstable": false
+    },
+    {
+      "sku": "c7g.large",
+      "arquitectura": "arm64",
+      "vcpu": 2,
+      "memoria_gib": 4,
+      "precio_hora": 0.0725,
+      "burstable": false
+    },
+    {
+      "sku": "t3.medium",
+      "arquitectura": "x86_64",
+      "vcpu": 2,
+      "memoria_gib": 4,
+      "precio_hora": 0.0416,
+      "burstable": true,
+      "linea_base_por_vcpu": 0.2
+    }
+  ],
+  "credito_cpu_excedente_vcpu_hora": {
+    "arm64": 0.04,
+    "x86_64": 0.05
+  },
+  "otros_costos": {
+    "_descripcion": "Costos atribuibles a la instancia además del cómputo, prorrateados por hora (730 h por mes).",
+    "disco_gb": 20,
+    "disco_gb_mes": 0.08,
+    "registro_imagen_gb": 1.3,
+    "registro_imagen_gb_mes": 0.1,
+    "transferencia_salida_gb": 0.09,
+    "bytes_respuesta": 162
+  },
+  "fargate_arm": {
+    "_descripcion": "Alternativa sin servidor permanente: una tarea que arranca, predice y se apaga (lote o escala a cero).",
+    "vcpu_hora": 0.03238,
+    "gb_hora": 0.00356,
+    "vcpu": 1,
+    "memoria_gb": 2,
+    "minutos_arranque_por_ejecucion": 5
+  },
+  "dimensionamiento": {
+    "_descripcion": "Regla para decidir si una instancia cabe con lo medido: memoria máxima de API + MLflow más sistema y Docker, con holgura; CPU p95 de API + MLflow con utilización objetivo.",
+    "memoria_sistema_mib": 768,
+    "holgura_memoria": 1.25,
+    "utilizacion_cpu_max": 0.8
+  },
+  "horas_mes": 730,
+  "slo": {
+    "_descripcion": "Objetivo de servicio para decidir qué configuración cabe en una instancia.",
+    "p95_ms_max": 200,
+    "error_pct_max": 1.0,
+    "utilizacion_objetivo": 0.7
+  },
+  "escenarios_demanda": [
+    {
+      "nombre": "P1 real: lote diario",
+      "descripcion": "Uso actual de P1: una predicción por estación activa para el día siguiente (470 estaciones), una vez al día.",
+      "predicciones_mes": 14288,
+      "pico_rps": 5,
+      "ejecuciones_mes": 30,
+      "hipotetico": false
+    },
+    {
+      "nombre": "App pública: 1 M consultas/mes",
+      "descripcion": "Hipótesis: la predicción se publica en una app y cada consulta llama a la API.",
+      "predicciones_mes": 1000000,
+      "pico_rps": 5,
+      "ejecuciones_mes": null,
+      "hipotetico": true
+    },
+    {
+      "nombre": "Carga sostenida: 60 pet/s",
+      "descripcion": "Hipótesis de estrés: el nivel máximo medido sin degradación (u60) durante todo el mes.",
+      "predicciones_mes": 157680000,
+      "pico_rps": 60,
+      "ejecuciones_mes": null,
+      "hipotetico": true
+    }
+  ]
+}

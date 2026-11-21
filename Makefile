@@ -180,6 +180,11 @@ carga-oficial:
 carga-graficas:
 	$(PYTHON_INTERPRETER) loadtests/graficas_carga.py
 
+## Costo por inferencia y proyección FinOps desde la evidencia de carga (docs/evidencias/operacion/finops/)
+.PHONY: finops
+finops:
+	$(PYTHON_INTERPRETER) scripts/estimate_inference_cost.py
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
