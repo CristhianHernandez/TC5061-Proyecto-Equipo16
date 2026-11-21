@@ -19,7 +19,7 @@ entrena, compara y lleva a producción un modelo por pregunta mediante el Model 
 | **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
 | **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
 | **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) · [Challenger de P1](#challenger-de-p1) · [A/B offline](#ab-offline-champion-vs-challenger) · [Continuous Training](#recomendación-y-continuous-training) · [PR de la entrega](#pr-de-la-entrega-de-monitoreo) |
-| **Sistema en operación** (Entregable 7) | [Sistema completo con Docker Compose](#sistema-completo-con-docker-compose) · [Arranque con un solo comando](#arranque-con-un-solo-comando) · [Servicios y modelo](#servicios-y-modelo) · [Configuración](#configuración-del-stack) |
+| **Sistema en operación** (Entregable 7) | [Sistema completo con Docker Compose](#sistema-completo-con-docker-compose) · [Arranque con un solo comando](#arranque-con-un-solo-comando) · [Servicios y modelo](#servicios-y-modelo) · [Configuración](#configuración-del-stack) · [CI/CD con GitHub Actions](#pipeline-de-cicd-con-github-actions) · [Pruebas de carga](#pruebas-de-carga-con-locust) · [FinOps](#análisis-finops-costo-por-inferencia) · [PR de la entrega](#pr-de-la-entrega-de-operación) |
 | **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
 
 ## Preguntas
@@ -68,26 +68,31 @@ Detalle: [`references/propuesta-parte-a.md`](references/propuesta-parte-a.md),
 ├── README.md
 ├── model_bundle/          <- copia del champion exportada con make export-model (fuera de Git)
 ├── data/                  <- fuera de Git (raw: CSV descargados; processed: Parquet y predicciones)
+├── .github/workflows/operacion.yml <- CI/CD: Ruff, pytest, build de la imagen y despliegue de prueba con Compose
+├── loadtests/             <- Locust (locustfile.py), captura de CPU/RAM, manifiesto y gráficas de carga
 ├── docs/                  <- auditoría, contrato de serving (serving/) y evidencias
 │   ├── monitoring/        <- contrato de los conjuntos de drift y A/B (Entregable 8)
-│   ├── operacion/         <- contrato de arranque del stack de Compose (Entregable 7)
+│   ├── operacion/         <- contrato de arranque del stack y secciones de carga y FinOps (Entregable 7)
 │   ├── reportes/actividad10/ <- A/B offline: tabla, segmentos, bootstrap, gráficas y decisión (Entregable 8)
 │   └── evidencias/
 │       ├── pytest/        <- salidas y captura de pruebas y estilo
 │       ├── deepchecks/    <- validación de datos
 │       ├── seguridad/     <- auditoría de seguridad
 │       ├── actividad8/    <- API y contenedor: salidas reales, prueba E2E y captura
-│       └── drift/         <- Evidently: reportes HTML, tabla por variable, gráficas y análisis (Entregable 8)
+│       ├── drift/         <- Evidently: reportes HTML, tabla por variable, gráficas y análisis (Entregable 8)
+│       └── operacion/     <- compose/ (smoke y clon limpio), carga/ (Locust por escenario) y finops/ (costos)
 ├── models/                <- reservado (los modelos viven en MLflow, fuera de Git)
 ├── notebooks/             <- 1.0-hh2-exploracion-viajes.ipynb
 ├── references/            <- propuesta, ML Canvas, arquitectura, plan y manifiesto de datos
-│   └── manifiesto_monitoreo.json <- ventanas, archivos y huellas del monitoreo (Entregable 8)
+│   ├── manifiesto_monitoreo.json <- ventanas, archivos y huellas del monitoreo (Entregable 8)
+│   └── finops_tarifas.json <- tarifas de nube con fuente y fecha, supuestos y escenarios de demanda (Entregable 7)
 ├── reports/figures/       <- copia local de las gráficas (fuera de Git, salvo .gitkeep)
 ├── requirements.txt       <- dependencias con versión fija
 ├── requirements-dev.txt   <- herramientas de pruebas, calidad y seguridad
 ├── requirements-serving.txt <- dependencias mínimas de la imagen de la API
 ├── scripts/smoke_container.sh <- build, run y prueba E2E del contenedor
 ├── scripts/smoke_compose.sh <- prueba de humo del stack de Compose: salud, predicción y persistencia
+├── scripts/estimate_inference_cost.py <- costo por inferencia y proyección FinOps desde la evidencia de carga
 ├── pytest.ini             <- marcas y ejecución estricta de pytest
 ├── tests/                 <- pruebas con datos sintéticos y MLflow temporal (pytest)
 └── mibici/
@@ -720,6 +725,109 @@ de carga y costo se hacen con el champion real.
   imagen es opcional, así que la imagen de la semana 8 sigue funcionando sola.
 
 Evidencia: [`docs/evidencias/operacion/compose/`](docs/evidencias/operacion/compose/).
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## Pipeline de CI/CD con GitHub Actions
+
+El workflow [`.github/workflows/operacion.yml`](.github/workflows/operacion.yml) corre en **cada
+`push` y cada `pull_request`** a cualquier rama, con dos jobs encadenados:
+
+| Job | Qué hace |
+|---|---|
+| `calidad` · Pruebas y calidad | Python 3.13 con caché de pip, `pip install -r requirements-dev.txt`, Ruff (`check` y `format --check` sobre `mibici/`) y `pytest -q` |
+| `despliegue` · Build y despliegue de prueba | Solo si `calidad` pasa. Construye la imagen del `Containerfile` con etiqueta del commit (`IMAGEN_TAG=${{ github.sha }}`), levanta el stack con Docker Compose en el runner y ejecuta [`scripts/smoke_compose.sh`](scripts/smoke_compose.sh): salud de `mlflow` y `api`, predicción real por `POST /predict` y persistencia del volumen. Publica los logs si falla y siempre baja el stack con `down -v` |
+
+El despliegue es **efímero**: el runner no tiene el champion (no hay `model_bundle/` en Git), así
+que `model-init` registra el modelo de prueba con la misma firma y la API predice de extremo a
+extremo. Para consultar o relanzar: pestaña **Actions** del repositorio → *MiBici - CI/CD
+Operacion*, o con la CLI:
+
+```bash
+gh run list --workflow operacion.yml --limit 5     # últimas ejecuciones y su estado
+gh run view <id> --log-failed                      # logs de un job fallido
+gh run rerun <id>                                  # volver a ejecutar una corrida (o hacer push a la rama)
+```
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## Pruebas de carga con Locust
+
+[`loadtests/locustfile.py`](loadtests/locustfile.py) simula usuarios que llaman a `POST /predict`
+con **un registro por petición** (24 registros reales de oct-2026 en orden fijo), pausas de 0.5 a
+1.5 s y validación del cuerpo: un HTTP 200 sin una predicción numérica positiva del modelo esperado
+cuenta como fallo. Cada corrida tiene 60 s de calentamiento y una ventana estable de 180 s, y
+captura CPU/RAM de los contenedores con `docker stats` en la misma ventana.
+
+```bash
+python -m pip install -r requirements-dev.txt      # incluye locust==2.47.0
+make export-model MLFLOW_PORT=5001                 # champion real en la imagen (con el MLflow del equipo)
+docker compose up --build -d
+make carga-oficial                                 # u05 y u20 (~9 min) + gráficas
+make carga ESCENARIO=u60 USUARIOS=60 SPAWN=5       # cualquier otro escenario
+make carga-graficas                                # regenerar gráficas y tabla resumen
+```
+
+| Escenario | Pet/s | p50 / p95 (ms) | Error | CPU API prom. | RAM API |
+|---|---|---|---|---|---|
+| **u05** · 5 usuarios | 4.8 | 19 / 28 | 0 % | 10 % | 217 MiB |
+| **u20** · 20 usuarios | 19.7 | 14 / 37 | 0 % | 27 % | 211 MiB |
+| u60 · 60 usuarios | 58.9 | 16 / 54 | 0 % | 64 % | 211 MiB |
+| u120 · 120 usuarios | 105.0 | 120 / 370 | 0 % | 177 % | 226 MiB |
+| u120 · `OMP_NUM_THREADS=1` | 114.9 | 27 / 140 | 0 % | 88 % | 221 MiB |
+
+Sin degradación hasta 60 usuarios. A 120 la API se satura por CPU por sobresuscripción de hilos de
+OpenMP, y `OMP_NUM_THREADS=1` reduce la CPU a la mitad. Detalle, interpretación y archivos por
+escenario: [`docs/evidencias/operacion/carga/`](docs/evidencias/operacion/carga/README.md).
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## Análisis FinOps: costo por inferencia
+
+[`scripts/estimate_inference_cost.py`](scripts/estimate_inference_cost.py) lee los
+`manifiesto.json` de cada escenario de carga y las tarifas de
+[`references/finops_tarifas.json`](references/finops_tarifas.json) (AWS us-east-1 On-Demand,
+proveedor, SKU, precio, fuente y fecha de consulta). No se teclea ninguna cifra a mano: si cambia
+una tarifa o se agrega un escenario, basta con volver a correrlo.
+
+```bash
+make finops                                        # o: python scripts/estimate_inference_cost.py
+python -m pytest tests/test_finops.py -q           # aritmética con casos conocidos y conciliación con la evidencia
+```
+
+**Fórmula:** costo de la ventana = horas facturables × tarifa por hora + disco, registro de imagen
+y transferencia de esa ventana; costo por inferencia = costo de la ventana ÷ predicciones exitosas
+de la misma ventana (*no definido* si son cero).
+
+| Resultado (instancia de referencia `t4g.medium`, $0.0336/h) | u05 | u20 |
+|---|---|---|
+| Predicciones exitosas en 180 s | 869 | 3,539 |
+| Costo de la ventana | $0.00181 | $0.00185 |
+| **Costo por 1,000 inferencias** | **$0.00208** | **$0.00052** |
+
+En operación real, P1 hace 14,288 predicciones al mes (470 estaciones × 1 al día). Una VM 24/7
+las atiende con 0.009 % de utilización, a $26.26/mes ($1.84 por 1,000). Servirlas en lote con una
+tarea Fargate que se apaga al terminar cuesta $0.23/mes. Las optimizaciones priorizadas, con su
+evidencia y su ahorro, están en
+[`docs/operacion/seccion_finops.md`](docs/operacion/seccion_finops.md): lote, `OMP_NUM_THREADS=1`
+y ajuste a `t4g.small`.
+
+Salidas en [`docs/evidencias/operacion/finops/`](docs/evidencias/operacion/finops/):
+`costo_ventana.csv`, `sensibilidad_instancias.csv`, `capacidad_slo.csv`,
+`proyeccion_mensual.csv`, `finops_resumen.json`, `resumen.md` y `graficas/`.
+
+![Costo por 1,000 inferencias y CPU por inferencia por escenario](docs/evidencias/operacion/finops/graficas/costo_por_escenario.png)
+
+<sub>[↑ Volver al contenido](#contenido)</sub>
+
+## PR de la entrega de operación
+
+| Contribución | Responsable | Revisión |
+|---|---|---|
+| [PR #23](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/23): Docker Compose con MLflow, model-init y API | CH1 - Cristhian | LH3 - Luis |
+| [PR #24](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/24): Locust, CPU/RAM, gráficas y manifiesto por corrida | LH3 - Luis | HH2 - Horacio |
+| [PR #25](https://github.com/CristhianHernandez/TC5061-Proyecto-Equipo16/pull/25): GitHub Actions con pruebas, build y despliegue de prueba | HH2 - Horacio | DH4 - Derick |
+| PR de la rama `feat/ops-finops-report`: costo por inferencia, optimizaciones, README y reporte | DH4 - Derick | CH1 - Cristhian |
 
 <sub>[↑ Volver al contenido](#contenido)</sub>
 
