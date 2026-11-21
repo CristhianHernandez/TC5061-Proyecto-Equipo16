@@ -12,7 +12,6 @@ from mibici.config import (
 from mibici.modeling.comun import ejecutar
 from mibici.modeling.registro import version_de_corrida
 
-
 HIPERPARAMETROS = {
     "n_estimators": 200,
     "max_depth": 15,
@@ -25,9 +24,7 @@ def main():
     cliente = MlflowClient()
     nombre = MODELOS_REGISTRADOS["p2"]
 
-    champion_antes = cliente.get_model_version_by_alias(
-        nombre, ALIAS_PRODUCCION
-    )
+    champion_antes = cliente.get_model_version_by_alias(nombre, ALIAS_PRODUCCION)
 
     run_id = ejecutar(
         question="p2",
@@ -51,19 +48,11 @@ def main():
     if str(version.version) == str(champion_antes.version):
         raise RuntimeError("La version Challenger coincide con el Champion")
 
-    cliente.set_model_version_tag(
-        nombre, version.version, "rol", "challenger"
-    )
-    cliente.set_model_version_tag(
-        nombre, version.version, "modelo", "random_forest"
-    )
-    cliente.set_model_version_tag(
-        nombre, version.version, "run_id", run_id
-    )
+    cliente.set_model_version_tag(nombre, version.version, "rol", "challenger")
+    cliente.set_model_version_tag(nombre, version.version, "modelo", "random_forest")
+    cliente.set_model_version_tag(nombre, version.version, "run_id", run_id)
 
-    champion_despues = cliente.get_model_version_by_alias(
-        nombre, ALIAS_PRODUCCION
-    )
+    champion_despues = cliente.get_model_version_by_alias(nombre, ALIAS_PRODUCCION)
 
     if str(champion_antes.version) != str(champion_despues.version):
         raise RuntimeError("El alias Champion cambio inesperadamente")
@@ -71,9 +60,7 @@ def main():
     if version.status != "READY":
         raise RuntimeError("La version Challenger no esta lista")
 
-    cliente.set_registered_model_alias(
-        nombre, ALIAS_RETADOR, version.version
-    )
+    cliente.set_registered_model_alias(nombre, ALIAS_RETADOR, version.version)
 
     print(f"Run ID: {run_id}")
     print(f"Champion conservado: v{champion_despues.version}")
@@ -82,4 +69,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
