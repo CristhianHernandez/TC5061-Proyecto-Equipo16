@@ -1,0 +1,11 @@
+escenario,instancia,arquitectura,vcpu,memoria_gib,precio_hora_usd,memoria_requerida_gib,vcpu_requeridas,cabe_con_lo_medido,respeta_limites_compose,creditos_cpu_usd,costo_por_1000_usd
+u05,t4g.small,arm64,2,2,0.0168,1.68,0.41,True,False,0.0,0.0011175640629285748
+u05,t4g.medium,arm64,2,4,0.0336,1.68,0.41,True,True,0.0,0.002084192371329035
+u05,c7g.medium,arm64,1,2,0.0363,1.68,0.41,True,False,0.0,0.0022395433494648235
+u05,c7g.large,arm64,2,4,0.0725,1.68,0.41,True,True,0.0,0.004322397204470576
+u05,t3.medium,x86_64,2,4,0.0416,1.68,0.41,True,True,0.0,0.0025444915658054445
+u20,t4g.small,arm64,2,2,0.0168,1.66,0.62,True,False,0.0,0.00028541728473719454
+u20,t4g.medium,arm64,2,4,0.0336,1.66,0.62,True,True,0.0,0.0005227724698177258
+u20,c7g.medium,arm64,1,2,0.0363,1.66,0.62,True,False,0.0,0.0005609188388485255
+u20,c7g.large,arm64,2,4,0.0725,1.66,0.62,True,True,0.0,0.0010723627495577651
+u20,t3.medium,x86_64,2,4,0.0416,1.66,0.62,True,True,0.0,0.0006357987484275025

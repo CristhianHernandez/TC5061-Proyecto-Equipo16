@@ -1,0 +1,8 @@
+demanda,hipotetico,predicciones_mes,pico_rps,opcion,instancia,instancias,horas_facturadas,computo_usd,creditos_cpu_usd,otros_usd,costo_mes_usd,utilizacion_pct,costo_por_1000_usd
+P1 real: lote diario,False,14288,5,"Actual: VM 24/7 t4g.medium, configuración base",t4g.medium,1,730,24.528,0.0,1.730208,26.258208,0.009232,1.8377805374468084
+P1 real: lote diario,False,14288,5,"Optimizada: VM 24/7 t4g.small, OMP_NUM_THREADS=1",t4g.small,1,730,12.264,0.0,1.730208,13.994208,0.004733,0.9794378722732362
+P1 real: lote diario,False,14288,5,Lote: tarea Fargate ARM por ejecución,Fargate 1 vCPU / 2 GB,1,2.543235,0.100458,0.0,0.130208,0.230666,,0.016144045028897436
+App pública: 1 M consultas/mes,True,1000000,5,"Actual: VM 24/7 t4g.medium, configuración base",t4g.medium,1,730,24.528,0.0,1.74458,26.27258,0.64615,0.026272579999999997
+App pública: 1 M consultas/mes,True,1000000,5,"Optimizada: VM 24/7 t4g.small, OMP_NUM_THREADS=1",t4g.small,1,730,12.264,0.0,1.74458,14.00858,0.33123,0.014008579999999998
+Carga sostenida: 60 pet/s,True,157680000,60,"Actual: VM 24/7 t4g.medium, configuración base",t4g.medium,2,1460,49.056,0.0,5.758974,54.814974,50.942435,0.0003476342871638762
+Carga sostenida: 60 pet/s,True,157680000,60,"Optimizada: VM 24/7 t4g.small, OMP_NUM_THREADS=1",t4g.small,1,730,12.264,2.526668,4.028974,18.819643,52.228412,0.00011935339205499769

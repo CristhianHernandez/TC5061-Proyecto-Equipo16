@@ -1,0 +1,5 @@
+config_api,api_workers,api_cpus,omp_num_threads,escenarios,escenario_capacidad,capacidad_rps,p95_ms,nucleo_s_por_inferencia,nucleos_reposo_mlflow,memoria_max_mib,es_cota_inferior
+"1 worker, 2 CPU",1,2.0,sin fijar,u05 u20 u60 u120,u60,58.89,54.0,0.010832940288652015,0.018000000000000002,596.9,False
+"2 workers, 2 CPU",2,2.0,sin fijar,u120_w2,,,,,,,False
+"2 workers, 4 CPU",2,4.0,sin fijar,u120_w2_cpu4,u120_w2_cpu4,111.74,190.0,0.03492791090782539,0.024,829.6,True
+"1 worker, 2 CPU, OMP=1",1,2.0,1,u120_omp1,u120_omp1,114.88,140.0,0.007625495695908694,0.028999999999999998,601.7,True
