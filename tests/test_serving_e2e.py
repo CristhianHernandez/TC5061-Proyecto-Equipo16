@@ -23,7 +23,8 @@ pytestmark = pytest.mark.contenedor
 
 EJEMPLO = Path(__file__).resolve().parents[1] / "docs/serving/ejemplo_entrada_p1.json"
 REZAGOS = ["demanda_lag_1", "demanda_lag_7", "demanda_media_7"]
-PREDICCIONES_ESPERADAS = [40.697957479000046, 276.77983750628846]
+# Champion versión 3 (corrida c6349c2b…); con la versión 2 eran [40.698…, 276.780…]
+PREDICCIONES_ESPERADAS = [40.96996058525438, 304.75072999634347]
 
 
 def solicitar(ruta, entrada=None):
