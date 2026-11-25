@@ -18,7 +18,7 @@ entrena, compara y lleva a producción un modelo por pregunta mediante el Model 
 | **Experimentación y Model Registry** (entrega 2) | [Qué registra cada corrida](#qué-registra-cada-corrida) · [Esquema del Model Registry: aliases](#esquema-del-model-registry-aliases) · [Modelo en producción de cada pregunta](#modelo-en-producción-de-cada-pregunta) · [P3: variables, métricas y regla de selección](#p3-variables-métricas-y-regla-de-selección) |
 | **Pruebas, calidad y seguridad** (semana 3) | [Pruebas y estilo](#pruebas-y-estilo) · [Evidencia de ejecución](#evidencia-de-ejecución) · [Reproducibilidad y buenas prácticas](#reproducibilidad-y-buenas-prácticas-del-equipo) |
 | **API REST en contenedor** (semana 8) | [Servicio de inferencia](#servicio-de-inferencia-api-rest-en-contenedor) · [Exportar el champion](#1-exportar-el-champion) · [Construir y arrancar](#2-construir-y-arrancar-el-contenedor) · [Probar desde el host](#3-probar-desde-el-host) · [Prueba E2E](#4-prueba-extremo-a-extremo-contra-el-contenedor) · [Solución de problemas](#solución-de-problemas) |
-| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) · [Challenger de P1](#challenger-de-p1) · [A/B offline](#ab-offline-champion-vs-challenger) · [Continuous Training](#recomendación-y-continuous-training) · [PR de la entrega](#pr-de-la-entrega-de-monitoreo) |
+| **Monitoreo de drift y A/B testing** (Entregable 8) | [Monitoreo de drift y A/B testing](#monitoreo-de-drift-y-ab-testing) · [Ventanas de datos](#ventanas-de-referencia-reciente-y-actual) · [Preparar los conjuntos](#preparar-los-conjuntos) · [Reporte de drift con Evidently](#reporte-de-drift-con-evidently) · [Challenger de P1](#challenger-de-p1) · [A/B offline](#ab-offline-champion-vs-challenger) · [Continuous Training](#recomendación-y-continuous-training) · [PR de la entrega](#pr-de-la-entrega-de-monitoreo) · [Model Card de P1](references/model_card_p1.md) |
 | **Sistema en operación** (Entregable 7) | [Sistema completo con Docker Compose](#sistema-completo-con-docker-compose) · [Arranque con un solo comando](#arranque-con-un-solo-comando) · [Servicios y modelo](#servicios-y-modelo) · [Configuración](#configuración-del-stack) · [CI/CD con GitHub Actions](#pipeline-de-cicd-con-github-actions) · [Pruebas de carga](#pruebas-de-carga-con-locust) · [FinOps](#análisis-finops-costo-por-inferencia) · [PR de la entrega](#pr-de-la-entrega-de-operación) |
 | **Colaboración** | [Flujo de trabajo en Git](#flujo-de-trabajo-en-git) · [Convención de ramas](#convención-de-ramas) · [Convención de commits](#convención-de-commits) · [PR de testing](#pr-de-la-entrega-de-testing) · [PR de serving](#pr-de-la-entrega-de-serving) |
 
@@ -260,7 +260,7 @@ Comandos para reproducir el modelo elegido desde un clon limpio (después de `in
 
 | Pregunta | Modelo registrado | Corrida que lo produce | Registro |
 |---|---|---|---|
-| P1 | `mibici-equipo16-p1-demanda@champion` | HGB Poisson `features=v1`, `learning_rate=0.05`, `max_leaf_nodes=63`, `max_iter=100` | `-e register -P question=p1` |
+| P1 | `mibici-equipo16-p1-demanda@champion` | HGB Poisson `features=v1`, `learning_rate=0.05`, `max_leaf_nodes=63`, `max_iter=100` | `-e register -P question=p1`; versión 3 reentrenada con `make monitoring-challenger` ([Model Card](references/model_card_p1.md)) |
 | P2 | `mibici-equipo16-p2-riesgo@champion` | HGB `learning_rate=0.1`, `class_weight=none`, `max_iter=300` | `-e register -P question=p2` |
 | P3 | `mibici-equipo16-p3-grupos@champion` | KMeans `features=v2`, `k=2` | `-e register -P question=p3` |
 
@@ -479,7 +479,9 @@ Respuesta real del contenedor (`HTTP/1.1 200 OK`):
 ```
 
 La demanda observada ese día fue de 32 y 442 viajes. `version` y `run_id` dependen del registry
-donde se exportó (en el registry de CH1 el champion es la versión 2, con las mismas predicciones).
+donde se exportó. Esta respuesta se capturó con la versión 2; desde el 2026-11-24 el champion del
+registry de CH1 es la versión 3, que para el mismo ejemplo devuelve `[40.96996058525438,
+304.75072999634347]`.
 
 | Endpoint | Respuesta |
 |---|---|
@@ -547,8 +549,9 @@ Salidas reales en [`docs/evidencias/actividad8/contenedor/`](docs/evidencias/act
 ## Monitoreo de drift y A/B testing
 
 Capa de observabilidad del Entregable 8 sobre el champion de P1 (`mibici-equipo16-p1-demanda`,
-versión 2 en el registry del equipo). Compara los datos con los que se entrenó el modelo contra un
-mes posterior y prepara una evaluación común para comparar dos versiones del modelo. El contrato
+versión 2 en el registry del equipo durante el análisis; la versión 3 lo reemplazó tras el A/B).
+Compara los datos con los que se entrenó el modelo contra un mes posterior y prepara una
+evaluación común para comparar dos versiones del modelo. El contrato
 completo, con los motivos de cada ventana y las reglas sin fuga, está en
 [`docs/monitoring/contrato_datasets.md`](docs/monitoring/contrato_datasets.md).
 
@@ -649,6 +652,11 @@ Decisión de la regla: **promover challenger**. El análisis completo está en
 
 - **Promover la versión 3** (`challenger`) a `champion`, con shadow o canary corto antes de mover el
   alias en el registry del equipo; la versión 2 queda como rollback.
+  **Aplicado el 2026-11-24:** en el registry del equipo, la versión 3 (corrida
+  `c6349c2bfe734e45b28521d7a822a4be`, commit `544634d`) es `champion` y la versión 2 es
+  `challenger`. Se reentrenó con `make monitoring-challenger` y el A/B reprodujo exactamente las
+  cifras de arriba. Es el modelo que sirve el stack de Docker Compose y el que documenta el
+  [Model Card](references/model_card_p1.md).
 - **Adoptar reentrenamiento mensual gobernado:** al publicarse cada mes, recalcular drift y calidad,
   reentrenar un candidato con todo lo disponible y promoverlo solo si gana el A/B en el mes nuevo.
   La política está en `politica_continuous_training`: aquí se activan el drift del objetivo (0.298),
@@ -704,7 +712,7 @@ el `mlflow.db` local ni los datos de MiBici.
 
 El orden lo garantizan los healthchecks: `mlflow` sano → `model-init` terminado → `api`. Si se
 exportó el champion antes del build, `model-init` registra esa copia exacta (versión 1 del stack,
-con etiquetas `version_origen = 2`, corrida, commit y versión de datos del registry del equipo). En
+con etiquetas `version_origen = 3`, corrida, commit y versión de datos del registry del equipo). En
 un clon limpio sin `model_bundle/`, como el runner de CI, registra un modelo de prueba con la misma
 firma (`origen = modelo-de-prueba`) para verificar que el sistema arranca y predice; las mediciones
 de carga y costo se hacen con el champion real.

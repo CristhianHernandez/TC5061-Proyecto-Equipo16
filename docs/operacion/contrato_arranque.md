@@ -51,8 +51,12 @@ modelo: [`.env.example`](../../.env.example).
 | Registry ya inicializado (volumen existente) | Nada (`"accion": "sin_cambios"`) | Recrear contenedores conserva el estado |
 
 En el registry del stack la copia queda como **versión 1**, con alias `champion` y estas etiquetas
-de linaje: `version_origen = 2` (champion del registry del equipo), `run_id_origen =
-47933c5b0df749edaeb159289053f70e`, `git_commit = c30cd49`, `version_datos = 4d8c2a1292fc`.
+de linaje: `version_origen = 3` (champion del registry del equipo), `run_id_origen =
+c6349c2bfe734e45b28521d7a822a4be`, `git_commit = 544634d`, `version_datos = 4d8c2a1292fc`.
+Las pruebas de carga y el análisis FinOps (2026-11-19) se midieron con la versión 2
+(`run_id_origen = 47933c5b0df749edaeb159289053f70e`, `git_commit = c30cd49`). La versión 3,
+promovida el 2026-11-24, tiene la misma receta, firma e hiperparámetros, así que su costo por
+inferencia es equivalente.
 `/health` reporta la versión del registry del stack (1); para saber de dónde viene:
 
 ```bash
@@ -69,7 +73,7 @@ Las mismas de la semana 8 ([`docs/serving/contrato_p1.md`](../serving/contrato_p
 ```bash
 curl -s -X POST http://127.0.0.1:8000/predict -H 'Content-Type: application/json' \
   -d @docs/serving/ejemplo_entrada_p1.json
-# {"predicciones":[40.697957479000046,276.77983750628846],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1",...}}
+# {"predicciones":[40.96996058525438,304.75072999634347],"modelo":{"nombre":"mibici-equipo16-p1-demanda","version":"1",...}}
 ```
 
 El ejemplo trae **2 registros, así que cada petición produce 2 predicciones**. Para FinOps, cuenten

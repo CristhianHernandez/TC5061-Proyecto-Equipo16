@@ -2,17 +2,19 @@
 
 Acuerdo entre el módulo de carga (`mibici/serving/model_loader.py`, PR de CH1) y la API
 (PR de LH3), el contenedor (PR de HH2) y la documentación final (PR de DH4). Todo lo que sigue se
-verificó contra el Model Registry del equipo el 2026-11-04.
+verificó contra el Model Registry del equipo el 2026-11-04 y se actualizó el 2026-11-24, al
+promover la versión 3 tras el A/B offline de octubre de 2026.
 
 ## Modelo
 
 | Campo | Valor |
 |---|---|
 | Nombre en el registry | `mibici-equipo16-p1-demanda` |
-| Alias / versión | `champion` → versión **2** (la versión 1 conserva `challenger`) |
+| Alias / versión | `champion` → versión **3** (la versión 2 conserva `challenger` para rollback) |
 | URI | `models:/mibici-equipo16-p1-demanda@champion` |
-| Corrida de origen | `p1-hgb-featuresv1-learning_rate0.05-max_iter100-max_leaf_nodes63` (`47933c5b0df749edaeb159289053f70e`) |
-| Linaje | commit `c30cd49`, versión de datos `4d8c2a1292fc`, `val_mae` = 6.14, supera al baseline naive |
+| Corrida de origen | `p1-hgb-challenger-reentrenado-abr-sep-2026` (`c6349c2bfe734e45b28521d7a822a4be`) |
+| Linaje | commit `544634d`, versión de datos `4d8c2a1292fc`, entrenada con oct-2024 a sep-2026; misma receta y firma que la versión 2 (`p1-hgb-featuresv1-learning_rate0.05-max_iter100-max_leaf_nodes63`, `val_mae` = 6.14, supera al baseline naive) |
+| Promoción | Ganó el A/B offline de octubre de 2026: MAE 8.018 frente a 8.122 de la versión 2 ([`docs/reportes/actividad10/`](../reportes/actividad10/README.md)) |
 | Algoritmo | `HistGradientBoostingRegressor` con pérdida Poisson (scikit-learn 1.9.1, serializado con skops) |
 | Qué predice | Viajes que inician en una estación en un día, con información disponible hasta el día anterior |
 
@@ -55,15 +57,17 @@ fue de 32 y 442 viajes.
 ## Salida
 
 Una lista de `float` finitos y positivos, en el mismo orden de los registros: viajes esperados.
-Para el ejemplo anterior, el champion versión 2 devuelve:
+Para el ejemplo anterior, el champion versión 3 devuelve:
 
 ```json
 {
-  "modelo": {"nombre": "mibici-equipo16-p1-demanda", "version": "2", "alias": "champion",
-             "run_id": "47933c5b0df749edaeb159289053f70e"},
-  "predicciones": [40.697957479000046, 276.77983750628846]
+  "modelo": {"nombre": "mibici-equipo16-p1-demanda", "version": "3", "alias": "champion",
+             "run_id": "c6349c2bfe734e45b28521d7a822a4be"},
+  "predicciones": [40.96996058525438, 304.75072999634347]
 }
 ```
+
+Con la versión 2 eran `[40.697957479000046, 276.77983750628846]`.
 
 ## Uso desde la API
 
@@ -89,7 +93,7 @@ make export-model           # descarga @champion a model_bundle/ y predice el ej
 # con otro puerto, el mismo en ambos: make mlflow MLFLOW_PORT=5001 / make export-model MLFLOW_PORT=5001
 ```
 
-`make export-model` resuelve el alias a la versión 2, descarga esa versión fija a
+`make export-model` resuelve el alias a la versión 3, descarga esa versión fija a
 `model_bundle/` (ignorada por Git), escribe el linaje en `model_bundle/modelo_servido.json` y
 comprueba que la copia carga y predice. Al arrancar, `cargar_modelo()` usa `model_bundle/` si
 existe y, si no, carga `MODEL_URI` desde `MLFLOW_TRACKING_URI`.
